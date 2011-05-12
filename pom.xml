@@ -1,0 +1,165 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.ccci</groupId>
+  <artifactId>sblio</artifactId>
+  <name>Siebel IO</name>
+  <version>1.0-SNAPSHOT</version>
+  <description>A wrapper library for Siebel's provided java api, which is horrid</description>
+  
+  
+  
+    <repositories>
+      <repository>
+        <id>ccci-libs-releases</id>
+        <name>Libraries (Full Releases)</name>
+        <url>http://arkham.ccci.org/artifactory/libs-releases/</url>
+      </repository>
+    </repositories>
+    
+    <pluginRepositories>
+      <pluginRepository>
+        <id>ccci-plugins-releases</id>
+        <name>Plugins Repository (Full Releases)</name>
+        <url>http://arkham.ccci.org/artifactory/plugins-releases/</url>
+      </pluginRepository>
+      <pluginRepository>
+        <id>ccci-plugins-snapshots</id>
+        <name>Plugins Repository (Snapshots)</name>
+        <url>http://arkham.ccci.org/artifactory/plugins-snapshots/</url>
+      </pluginRepository>
+    </pluginRepositories>
+    
+    <issueManagement>
+      <system>Jira</system>
+      <url>http://itwiki.ccci.org/jira/</url>
+    </issueManagement>
+    
+    <ciManagement>
+      <system>Bamboo</system>
+    </ciManagement>
+    
+    <scm>
+      <connection>scm:svn:http://arkham.ccci.org/svn/java/trunk/commons/sblio/</connection>
+      <developerConnection>scm:svn:http://arkham.ccci.org/svn/java/trunk/commons/sblio/</developerConnection>
+      <!-- no fisheye yet: -->
+      <url>http://arkham.ccci.org/svn/java/trunk/commons/sblio/</url>
+    </scm>
+        
+    <distributionManagement>
+      <repository>
+        <id>artifacts.ccci.org-releases</id>
+        <name>artifacts.ccci.org-releases</name>
+        <url>http://arkham.ccci.org:80/artifactory/libs-releases-local</url>
+      </repository>
+    
+      <snapshotRepository>
+        <id>artifacts.ccci.org-snapshots</id>
+        <name>artifacts.ccci.org-snapshots</name>
+        <url>http://arkham.ccci.org:80/artifactory/libs-snapshots-local</url>
+      </snapshotRepository>
+    </distributionManagement>
+        
+  <build>
+    <plugins>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+         <source>1.5</source>
+          <target>1.5</target>
+        </configuration>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+     </plugin>
+     
+    </plugins>
+  </build> 
+   
+  <dependencies>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+       <version>5.10</version>
+      <classifier>jdk15</classifier>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId> 
+          <artifactId>junit</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-all</artifactId>
+      <version>1.2</version>
+      <scope>test</scope>
+    </dependency>
+  
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <version>1.6</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.oracle</groupId>
+      <artifactId>siebel-java-data-bean</artifactId>
+      <version>8.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.ccci</groupId>
+      <artifactId>framework-core</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.8</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>commons-pool</groupId>
+      <artifactId>commons-pool</artifactId>
+      <version>1.2</version>
+    </dependency>
+      
+    <dependency>
+      <groupId>ccciFailover.jar</groupId>
+      <artifactId>ccciFailover</artifactId>
+      <version>0.2</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>1</version>
+    </dependency>
+    
+  </dependencies>
+  
+  <properties>
+      <!-- This is to address a maven 3 / bamboo (< 2.6) problem: http://jira.atlassian.com/browse/BAM-4887
+      We work around this by manually printing the token Bamboo is looking for in a successful build.  The
+      build should be configured to run the standard maven goals and then the help:evaluate goal; e.g.
+      mvn help:evaluate -Dexpression='atlassian.bamboo.builder.successMarker'
+        -->
+    <atlassian.bamboo.builder.successMarker>BUILD SUCCESSFUL</atlassian.bamboo.builder.successMarker>
+  </properties>
+</project>
