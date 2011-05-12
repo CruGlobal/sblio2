@@ -59,18 +59,18 @@ public class SiebelDataBeanFactory extends BasePoolableObjectFactory
     	
     	try
     	{
-    		IDssDataBean databean;
+    	    SiebelPersistence databean;
     		url = SiebelSettings.getProps().getProperty(system + "." + "url");
     		if(Util.isBlank(username)) username = SiebelSettings.getProps().getProperty(system + "." + "defaultUser");
     		password = SiebelSettings.getProps().getProperty(system + "." + username);
     		
     		if(this.failoverManager == null)
     		{
-    			databean = new DssDataBean(username,password,url);
+    			databean = new SiebelPersistenceImpl(username,password,url);
     		}
     		else
     		{
-    			databean = DatabeanProxy.wrapDatabean(new DssDataBean(username,password,url), failoverManager);
+    			databean = DatabeanProxy.wrapDatabean(new SiebelPersistenceImpl(username,password,url), failoverManager);
     		}
     		
     		return databean;
@@ -88,7 +88,7 @@ public class SiebelDataBeanFactory extends BasePoolableObjectFactory
     public boolean validateObject(Object obj)
     {
     	boolean superBool = super.validateObject(obj);
-    	IDssDataBean databean = (IDssDataBean) obj;
+    	SiebelPersistence databean = (SiebelPersistence) obj;
     	try
     	{
     		databean.getDataBean().getBusObject("CCCI DSS BO").getBusComp("CCCI DSS BU Name Lookup");

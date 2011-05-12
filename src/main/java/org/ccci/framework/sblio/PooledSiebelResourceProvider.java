@@ -20,7 +20,7 @@ public class PooledSiebelResourceProvider implements IResourceProvider
     static
     {
         resourceNames = new ArrayList(1);
-        resourceNames.add(DssDataBean.NAME);
+        resourceNames.add(SiebelPersistenceImpl.NAME);
     }
 	
     public PooledSiebelResourceProvider(){}
@@ -44,7 +44,7 @@ public class PooledSiebelResourceProvider implements IResourceProvider
 	{
 		if(resourceNames.contains(name))
 		{
-			IDssDataBean bean = SiebelDataBeanPoolList.getInstance().getDataBean(useDev?"DEV":"TEST", null, null, null);
+		    SiebelPersistence bean = SiebelDataBeanPoolList.getInstance().getDataBean(useDev?"DEV":"TEST", null, null, null);
 			try
 			{
 				bean.getDataBean().getBusObject("Account");
@@ -70,9 +70,9 @@ public class PooledSiebelResourceProvider implements IResourceProvider
 
 	public void releaseResource(Object resource, IUser user) throws Exception
 	{
-		if(resource instanceof IDssDataBean)
+		if(resource instanceof SiebelPersistence)
 		{
-			IDssDataBean databean = (IDssDataBean)resource;
+		    SiebelPersistence databean = (SiebelPersistence)resource;
 			databean.reset();
 			SiebelDataBeanPoolList.getInstance().releaseDataBean(databean);
 		}

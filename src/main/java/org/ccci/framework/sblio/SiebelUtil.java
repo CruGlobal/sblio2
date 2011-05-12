@@ -1,5 +1,12 @@
 package org.ccci.framework.sblio;
 
+import java.lang.reflect.Field;
+
+import org.ccci.framework.sblio.annotations.Key;
+import org.ccci.framework.sblio.annotations.MvgField;
+import org.ccci.framework.sblio.annotations.ReadOnly;
+import org.ccci.framework.sblio.annotations.Transient;
+import org.ccci.util.Util;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -15,5 +22,43 @@ public class SiebelUtil
     
     /** prints and parses dates using the format that Siebel uses for dates with a time component: {@code MM/dd/yyyy hh:mm:ss} */
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern(SIEBEL_DATE_TIME_PATTERN);
+
+    static boolean isTransientField(Field field)
+    {
+    	return field.getAnnotation(Transient.class) != null;
+    }
+
+    static boolean isManyToManyField(Field field)
+    {
+        MvgField md = field.getAnnotation(MvgField.class);
+    	return (md!=null && md.manyToMany());
+    }
+    
+    static boolean isMvgField(Field field)
+    {
+        return field.getAnnotation(MvgField.class) != null;
+    }
+
+    static boolean isKeyField(Field field)
+    {
+    	return field.getAnnotation(Key.class) != null;
+    }
+
+    static boolean isReadOnlyField(Field field)
+    {
+    	ReadOnly ro = field.getAnnotation(ReadOnly.class);
+    	
+    	return ro!=null;
+    }
+
+    static String determineSiebelFieldNameForMvgField(Object parentObj, String fieldName)
+    {
+        String siebelFieldName = fieldName;
+        Field field = SiebelHelper.getField(parentObj.getClass(), fieldName);
+        if(field==null) return fieldName;
+        MvgField fieldMetadata = field.getAnnotation(MvgField.class);
+        if(fieldMetadata!=null && !Util.isBlank(fieldMetadata.name())) siebelFieldName = fieldMetadata.name();
+        return siebelFieldName;
+    }
 
 }

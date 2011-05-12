@@ -33,7 +33,7 @@ public class DssDataBeanTest
         Gender gender;
     }
     
-    DssDataBeanHelper helper = new DssDataBeanHelper();
+    SiebelHelper helper = new SiebelHelper();
 
     @Test
     public void testConvertEnumToString() throws SecurityException, NoSuchFieldException

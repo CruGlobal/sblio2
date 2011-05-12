@@ -4,11 +4,11 @@ import com.siebel.data.SiebelException;
 import com.siebel.data.SiebelPropertySet;
 import com.siebel.data.SiebelService;
 
-public class DssSiebelService
+public class SiebelServiceWrapper
 {
 	private SiebelService service;
 	
-	public DssSiebelService(SiebelService service)
+	public SiebelServiceWrapper(SiebelService service)
 	{
 		this.service = service;
 	}

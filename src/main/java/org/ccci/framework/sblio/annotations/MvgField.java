@@ -7,8 +7,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
+@Target(ElementType.TYPE)
 @Inherited
-public @interface ManyToMany {
-	public Class clazz();
+public @interface MvgField {
+    public String name() default "";
+    public Class clazz();
+    public boolean manyToMany() default false;
+    public boolean cascadeLoad() default false;
 }

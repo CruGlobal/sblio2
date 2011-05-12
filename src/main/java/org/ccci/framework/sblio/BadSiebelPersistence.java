@@ -10,10 +10,10 @@ import com.siebel.data.SiebelException;
  * @author ryan.t.carlson
  *
  */
-public class BadDataBean implements IDssDataBean
+public class BadSiebelPersistence implements SiebelPersistence
 {
 	
-	public BadDataBean()
+	public BadSiebelPersistence()
 	{
 		super();
 	}
@@ -23,7 +23,7 @@ public class BadDataBean implements IDssDataBean
 		return null;
 	}
 
-	public DssSiebelService getService(String arg0)
+	public SiebelServiceWrapper getService(String arg0)
 	{
 		throw new SblioException(null, new SiebelException());
 	}
@@ -38,7 +38,7 @@ public class BadDataBean implements IDssDataBean
 		throw new SblioException(null, new SiebelException());
 	}
 
-	public boolean siebelDeleteMvgField(Object parentObj, Object recordForDelete)
+	public boolean siebelDeleteMvgField(Object parentObj, String fieldName, Object recordForDelete)
 	{
         throw new SblioException(null, new SiebelException());
 	}
@@ -48,7 +48,7 @@ public class BadDataBean implements IDssDataBean
         throw new SblioException(null, new SiebelException());
 	}
 
-	public String siebelInsertMvgField(Object parentObj, Object recordForUpsert)
+	public String siebelInsertMvgField(Object parentObj, String fieldName, Object recordForUpsert)
 	{
         throw new SblioException(null, new SiebelException());
 	}
@@ -73,7 +73,7 @@ public class BadDataBean implements IDssDataBean
         throw new SblioException(null, new SiebelException());
 	}
 
-	public String siebelUpsertMvgField(Object parentObj, Object recordForUpsert)
+	public String siebelUpsertMvgField(Object parentObj, String fieldName, Object recordForUpsert)
 	{
         throw new SblioException(null, new SiebelException());
 	}
@@ -96,7 +96,7 @@ public class BadDataBean implements IDssDataBean
 		return false;
 	}
 
-	public String siebelSetMvgPrimaryRecord(Object parentObj, Object childObj)
+	public String siebelSetMvgPrimaryRecord(Object parentObj, String fieldName, Object childObj)
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -107,4 +107,5 @@ public class BadDataBean implements IDssDataBean
 		// TODO Auto-generated method stub
 		return null;
 	}
+
 }

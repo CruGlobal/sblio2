@@ -7,13 +7,8 @@ import java.util.List;
 import org.ccci.exceptions.FatalException;
 import org.ccci.framework.sblio.annotations.BusinessComp;
 import org.ccci.framework.sblio.annotations.BusinessObject;
-import org.ccci.framework.sblio.annotations.Key;
-import org.ccci.framework.sblio.annotations.ManyToMany;
-import org.ccci.framework.sblio.annotations.MvgBusComp;
-import org.ccci.framework.sblio.annotations.ReadOnly;
-import org.ccci.framework.sblio.annotations.Transient;
+import org.ccci.framework.sblio.annotations.MvgField;
 import org.ccci.framework.sblio.exceptions.SiebelUnavailableException;
-import org.ccci.util.Util;
 
 import com.siebel.data.SiebelBusObject;
 import com.siebel.data.SiebelDataBean;
@@ -29,21 +24,18 @@ import com.siebel.data.SiebelException;
  * @author Ryan Carlson
  * @author Matt Drees
  * @author Lee Braddock
+ * @author Nathan Kopp
  */
-public class DssDataBean implements IDssDataBean
+public class SiebelPersistenceImpl implements SiebelPersistence
 {
-	private final DssDataBeanHelper helper = new DssDataBeanHelper();
-	
 //	private static Logger siebelLog = Logger.getLogger("Siebel");
 	
-    public static String NAME = "SiebelDataBean";
+    public static String NAME = "SiebelPersistence";
 	private String system;
 	private String username;
 	private String url;
 
 	private SiebelDataBean databean;
-	private SiebelBusObject busObj;
-	private DssBusComp mainBusComp;
 
 	static
 	{
@@ -57,7 +49,7 @@ public class DssDataBean implements IDssDataBean
 	    }
 	}
 	
-	public DssDataBean(String username, String password, String url)
+	public SiebelPersistenceImpl(String username, String password, String url)
 	{
 		databean = new SiebelDataBean();
 		try
@@ -77,7 +69,7 @@ public class DssDataBean implements IDssDataBean
 	 * @param system
 	 * @param username
 	 */
-	public DssDataBean(String system, String username)
+	public SiebelPersistenceImpl(String system, String username)
 	{
 		this.system = system;
 		this.username = username;
@@ -100,19 +92,17 @@ public class DssDataBean implements IDssDataBean
 	public int siebelSelect(Object obj)
 	{
 		long end = System.currentTimeMillis();
-		long start = end;
+		BusComp mainBusComp = null;
 		try
         {
-            setupForQuery(obj, false);
-
-    		mainBusComp.executeQuery(false);
+		    mainBusComp = setupForQuery(obj, false);
+		    mainBusComp.executeQuery(false);
     
     		if(mainBusComp.firstRecord())
     		{
     			copySearchResultsToEntityObject(mainBusComp, obj);
     			
-    			// process (any) many to many mvg(s)
-    			siebelSelectManyToManyMvg(obj);
+    			cascadeLoadRelationships(mainBusComp, obj);
 				
     			int count = 1;
 
@@ -134,57 +124,68 @@ public class DssDataBean implements IDssDataBean
         }
         finally
         {
-    		reset();
+            if(mainBusComp!=null) mainBusComp.release();
 //        	Logger.getLogger("Siebel").debug("SiebelSelect query finished. Time: " + String.valueOf(end-start) + ". MainBusComp: " + mainBusComp.getName());
         }
 	}
 
-	private void siebelSelectManyToManyMvg(Object obj)
+	private void cascadeLoadRelationships(BusComp parentBusComp, Object parentObj)
 	{
 		try
 		{
-			Field fs[] = obj.getClass().getDeclaredFields();
+			List<Field> fs=  SiebelHelper.getAllDeclaredInstanceFields(parentObj);
 			for (Field f : fs)
 			{
 				f.setAccessible(true);
-				ManyToMany manyToMany = f.getAnnotation(ManyToMany.class);
-				if (manyToMany != null)
-					f.set(obj, siebelListSelectManyToManyMvg(mainBusComp, manyToMany.clazz().newInstance()));
+				MvgField fieldMetadata = f.getAnnotation(MvgField.class);
+				if (fieldMetadata != null && fieldMetadata.cascadeLoad())
+				{
+				    String siebelName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, f.getName());
+					f.set(parentObj, siebelListSelectMvg(parentBusComp, siebelName, fieldMetadata.clazz().newInstance()));
+				}
 			}
 
 		} catch (Exception e) {
-			throw new SblioException("Unable to perform select on " + obj, e);
+			throw new SblioException("Unable to perform select on " + parentObj, e);
 		}
 	}
 
-    private <T> List<T> siebelListSelectManyToManyMvg(DssBusComp mainBusComp, T mvgObject) 
+	/**
+	 * Iterate through the instances of mvgObject in the context of mainBusComp
+	 * @param <T>
+	 * @param mainBusComp
+	 * @param exampleChildObject
+	 * @return
+	 */
+    private <T> List<T> siebelListSelectMvg(BusComp mainBusComp, String fieldName, T exampleChildObject) 
 	{
-        if (mvgObject == null)
+        if (exampleChildObject == null)
             throw new NullPointerException("query object is null");
         
-		DssBusComp m_busCompMVG = null;
+		BusComp tempBusComp = null;
 
         try
         {
     		List<T> returnList = new ArrayList<T>();
     		
-    		m_busCompMVG = new DssBusComp(mainBusComp.getMVGBusComp(getBusinessComponent(mvgObject).name()));
+    		tempBusComp = new BusComp(mainBusComp.getMVGBusComp(fieldName), null, null);
     		
-        	prepareForQuery(m_busCompMVG, mvgObject, false, true);
+        	tempBusComp.prepareForQuery(exampleChildObject, false, true);
 
-			m_busCompMVG.executeQuery2(true, true);
+			tempBusComp.executeQuery2(true, true);
 			
-    		if(m_busCompMVG.firstRecord())
+    		if(tempBusComp.firstRecord())
     		{
     		    @SuppressWarnings("unchecked")
-    		    Class<T> objType = (Class<T>) mvgObject.getClass();
+    		    Class<T> objType = (Class<T>) exampleChildObject.getClass();
     			do
     			{
     				T tempObj = instantiate(objType);
-    				copySearchResultsToEntityObject(m_busCompMVG, tempObj);
+    				copySearchResultsToEntityObject(tempBusComp, tempObj);
+    				cascadeLoadRelationships(tempBusComp, tempObj);
     				returnList.add(tempObj);
     			}
-    			while(m_busCompMVG.nextRecord());
+    			while(tempBusComp.nextRecord());
     		}
     		
     		return returnList;
@@ -192,12 +193,12 @@ public class DssDataBean implements IDssDataBean
         }
         catch (SiebelException e)
         {
-            throw new SblioException("Unable to perform list select on " + mvgObject, e);
+            throw new SblioException("Unable to perform list select on " + exampleChildObject, e);
         }
         finally
         {
-        	if(m_busCompMVG != null)
-        		m_busCompMVG.release();
+        	if(tempBusComp != null)
+        		tempBusComp.release();
         }
 	}
 
@@ -208,10 +209,12 @@ public class DssDataBean implements IDssDataBean
 		
         if (obj == null)
             throw new NullPointerException("query object is null");
+        
+        BusComp mainBusComp = null;
         try
         {
     		List<T> returnList = new ArrayList<T>();
-    		setupForQuery(obj, false);
+    		mainBusComp = setupForQuery(obj, false);
     		mainBusComp.executeQuery(false);
     		
     		if(mainBusComp.firstRecord())
@@ -236,7 +239,7 @@ public class DssDataBean implements IDssDataBean
         }
         finally
         {
-    		reset();
+            if(mainBusComp!=null) mainBusComp.release();
 //        	Logger.getLogger("Siebel").debug("SiebelListSelect query finished. Time: " + String.valueOf(end-start) + ". MainBusComp: " + mainBusComp.getName());
         }
 	}
@@ -263,12 +266,12 @@ public class DssDataBean implements IDssDataBean
 
 	public String siebelInsert(Object obj)
 	{
+	    BusComp mainBusComp = null;
 	    try
 	    {
-    		loadBusinessObject(obj);
-    		loadBusinessComponent(obj);
+	        mainBusComp = loadCompAndObj(obj);
     		
-    		mainBusComp.newRecord(false);
+	        mainBusComp.newRecord(false);
     		setFieldsForInsert(mainBusComp, obj);
     		boolean success = mainBusComp.writeRecord();
     		String retId = mainBusComp.getFieldValue("Id");
@@ -282,18 +285,19 @@ public class DssDataBean implements IDssDataBean
         }
         finally
         {
-        	reset();
+            if(mainBusComp!=null) mainBusComp.release();
         }
 	}
 
 	public String siebelUpsert(Object obj)
 	{
 		String retVal;
+		BusComp mainBusComp = null;
 		try
         {
-            setupForQuery(obj, true);
+		    mainBusComp = setupForQuery(obj, true);
 
-            mainBusComp.executeQuery(false);
+		    mainBusComp.executeQuery(false);
 
             if(mainBusComp.firstRecord())
             {
@@ -302,7 +306,7 @@ public class DssDataBean implements IDssDataBean
             }
             else
             {
-            	mainBusComp.newRecord(false);
+                mainBusComp.newRecord(false);
             	setFieldsForInsert(mainBusComp, obj);
             	mainBusComp.writeRecord();	
             }
@@ -315,35 +319,35 @@ public class DssDataBean implements IDssDataBean
         }
         finally
         {
-        	reset();
+            if(mainBusComp!=null) mainBusComp.release();
         }
         
 		return retVal;
 	}
 	
-	public String siebelSetMvgPrimaryRecord(Object parentObj, Object childObj)
+	public String siebelSetMvgPrimaryRecord(Object parentObj, String fieldName, Object childObj)
 	{
-		DssBusComp childBusComp = null;
+		BusComp childBusComp = null;
 
+		BusComp mainBusComp = null;
 		try
 		{
-			setupForQuery(parentObj, true);
+		    mainBusComp = setupForQuery(parentObj, true);
 			
-			mainBusComp.executeQuery(false);
+		    mainBusComp.executeQuery(false);
 			
 			if(mainBusComp.firstRecord())
 			{
-				MvgBusComp mvgBc = childObj.getClass().getAnnotation(MvgBusComp.class);
-				if(mvgBc == null) throw new RuntimeException("missing annotation");
+			    String siebelFieldName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, fieldName);
 				
-				childBusComp = new DssBusComp(mainBusComp.getMVGBusComp(mvgBc.name()));
+				childBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName), null, null);
 				
-				activateFields(childBusComp,childObj);
+				childBusComp.activateFields(childObj);
 				
 				childBusComp.setViewMode(3);
 				childBusComp.clearToQuery();
 				
-				setSearchSpecs(childBusComp, childObj, false);
+				childBusComp.setSearchSpecs(childObj, false);
 				
 				childBusComp.executeQuery(false);
 				
@@ -363,89 +367,84 @@ public class DssDataBean implements IDssDataBean
 			if(childBusComp != null)
 				childBusComp.release();
 			
-			reset();
+			if(mainBusComp!=null) mainBusComp.release();
 		}
 		
 		return "";
 	}
 	
-	public String siebelInsertMvgField(Object parentObj, Object recordForUpsert)
+	public String siebelInsertMvgField(Object parentObj, String fieldName, Object recordForUpsert)
 	{
-		return siebelUpsertMvgField(parentObj,recordForUpsert,true,false);
+		return siebelUpsertMvgField(parentObj,fieldName,recordForUpsert,true);
 	}
 	
-	public String siebelInsertMvgField(Object parentObj, Object recordForUpsert, boolean manyToMany)
+	public String siebelUpsertMvgField(Object parentObj, String fieldName, Object recordForUpsert) 
 	{
-		return siebelUpsertMvgField(parentObj,recordForUpsert,true,manyToMany);
+		return siebelUpsertMvgField(parentObj,fieldName,recordForUpsert,false);
 	}
 	
-	public String siebelUpsertMvgField(Object parentObj, Object recordForUpsert) 
+	private String siebelUpsertMvgField(Object parentObj, String fieldName, Object recordForUpsert, boolean forceInsert)
 	{
-		return siebelUpsertMvgField(parentObj,recordForUpsert,false,false);
-	}
-	
-	private String siebelUpsertMvgField(Object parentObj, Object recordForUpsert, boolean forceInsert, boolean manyToMany)
-	{
-		DssBusComp mvgBusComp = null;
-    	DssBusComp assocBusComp = null;
+		BusComp mvgBusComp = null;
+    	BusComp assocBusComp = null;
 		String rowId = "";
 		
 		if(parentObj != null)
 		{
+		    BusComp mainBusComp = null;
 			try
             {
-                setupForQuery(parentObj, true);
+			    mainBusComp = setupForQuery(parentObj, true);
 
                 mainBusComp.executeQuery(false);
 
                 if(mainBusComp.firstRecord())
                 {
-                	MvgBusComp mvgBc = recordForUpsert.getClass().getAnnotation(MvgBusComp.class);
-                	
-                	if(mvgBc != null)
-                	{
-                		mvgBusComp = new DssBusComp(mainBusComp.getMVGBusComp(mvgBc.name()));
+                    Field f = SiebelHelper.getField(parentObj.getClass(), fieldName);
+                    MvgField fieldMetadata = f.getAnnotation(MvgField.class);
+                    
+                    String siebelFieldName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, fieldName);
+            		mvgBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName), null, null);
 
-                		if(manyToMany)
-                		{
-                        	assocBusComp = new DssBusComp(mvgBusComp.getAssocBusComp());
+            		if(fieldMetadata!=null && fieldMetadata.manyToMany())
+            		{
+                    	assocBusComp = new BusComp(mvgBusComp.getAssocBusComp(), null, null);
 
-                        	prepareForQuery(assocBusComp, recordForUpsert, false, false);
+                    	assocBusComp.prepareForQuery(recordForUpsert, false, false);
 
-                        	assocBusComp.executeQuery2(true, true);
+                    	assocBusComp.executeQuery2(true, true);
 
-                			if (assocBusComp.firstRecord())
-                			{
-	                			assocBusComp.associate(true);
-	                			assocBusComp.writeRecord();
-	                			mainBusComp.writeRecord();
-	                			
-	                			// set primary field if first record in MVG
-	                			prepareForQuery(mvgBusComp, recordForUpsert, true, false);
-	                			mvgBusComp.executeQuery2(true, true);
-	            				if (mvgBusComp.firstRecord())
-	            				{
-	            					mvgBusComp.setFieldValue("SSA Primary Field", "Y");
-	            					mainBusComp.writeRecord();
-	            				}
-                			}
-                		}
+            			if (assocBusComp.firstRecord())
+            			{
+                			assocBusComp.associate(true);
+                			assocBusComp.writeRecord();
+                			mainBusComp.writeRecord();
                 			
-                		else if(!forceInsert && searchForMatchInMvg(mvgBusComp, recordForUpsert))	//update
-                		{
-                			setFieldsForUpdate(mvgBusComp, recordForUpsert);
-                			mvgBusComp.writeRecord(); 
-                			mainBusComp.writeRecord();
-                		}
-                		else	//insert
-                		{
-                			mvgBusComp.newRecord(true);
-                			setFieldsForInsert(mvgBusComp, recordForUpsert);
-                			mvgBusComp.writeRecord();
-                			mainBusComp.writeRecord();
-                		}
-                		rowId = mvgBusComp.getFieldValue("Id");
-                	}
+                			// set primary field if successful link
+                			mvgBusComp.prepareForQuery(recordForUpsert, true, false);
+                			mvgBusComp.executeQuery2(true, true);
+            				if (mvgBusComp.firstRecord())
+            				{
+            					mvgBusComp.setFieldValue("SSA Primary Field", "Y");
+            					mainBusComp.writeRecord();
+            				}
+            			}
+            		}
+            			
+            		else if(!forceInsert && searchForMatchInMvg(mvgBusComp, recordForUpsert))	//update
+            		{
+            			setFieldsForUpdate(mvgBusComp, recordForUpsert);
+            			mvgBusComp.writeRecord(); 
+            			mainBusComp.writeRecord();
+            		}
+            		else	//insert
+            		{
+            			mvgBusComp.newRecord(true);
+            			setFieldsForInsert(mvgBusComp, recordForUpsert);
+            			mvgBusComp.writeRecord();
+            			mainBusComp.writeRecord();
+            		}
+            		rowId = mvgBusComp.getFieldValue("Id");
                 }
             }
             catch (SiebelException e)
@@ -460,7 +459,7 @@ public class DssDataBean implements IDssDataBean
             	if(assocBusComp != null)
             		assocBusComp.release();
             	
-            	reset();
+            	if(mainBusComp!=null) mainBusComp.release();
             }
 		}
 		
@@ -469,9 +468,10 @@ public class DssDataBean implements IDssDataBean
 	
 	public boolean siebelDelete(Object obj)
 	{
+	    BusComp mainBusComp = null;
 		try
         {
-            setupForQuery(obj, true);
+		    mainBusComp = setupForQuery(obj, true);
 
             mainBusComp.executeQuery(false);
 
@@ -488,23 +488,24 @@ public class DssDataBean implements IDssDataBean
         }
         finally
         {
-        	reset();
+            if(mainBusComp!=null) mainBusComp.release();
         }
 	}
 	
 	public boolean siebelDeleteAll(Object obj)
 	{
+	    BusComp mainBusComp = null;
 		try
         {
-            setupForQuery(obj, false);
+		    mainBusComp = setupForQuery(obj, false);
 
-            mainBusComp.executeQuery(false);
+		    mainBusComp.executeQuery(false);
 
             if(mainBusComp.firstRecord())
             {
             	do
             	{
-            		mainBusComp.deleteRecord();
+            	    mainBusComp.deleteRecord();
             	}
             	while(mainBusComp.nextRecord());
             	return true;
@@ -518,35 +519,33 @@ public class DssDataBean implements IDssDataBean
         }
         finally
         {
-        	reset();
+            if(mainBusComp!=null) mainBusComp.release();
         }
 	}
 	
-	public boolean siebelDeleteMvgField(Object parentObj, Object recordForDelete)
+	public boolean siebelDeleteMvgField(Object parentObj, String fieldName, Object recordForDelete)
 	{		
 		if(parentObj != null)
 		{
-			DssBusComp mvgBusComp = null;
+			BusComp mvgBusComp = null;
+			BusComp mainBusComp = null;
 
 			try
             {
-                setupForQuery(parentObj, true);
+			    mainBusComp = setupForQuery(parentObj, true);
 
-                mainBusComp.executeQuery(false);
+			    mainBusComp.executeQuery(false);
 
                 if(mainBusComp.firstRecord())
                 {
-                	MvgBusComp mvgBc = recordForDelete.getClass().getAnnotation(MvgBusComp.class);
-                	
-                	if(mvgBc != null)
-                	{
-                		mvgBusComp = new DssBusComp(mainBusComp.getMVGBusComp(mvgBc.name()));
-                		if(searchForMatchInMvg(mvgBusComp, recordForDelete))
-                		{
-                			mvgBusComp.deleteRecord();
-                			mainBusComp.writeRecord();
-                		}
-                	}
+                    String siebelFieldName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, fieldName);
+                    
+            		mvgBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName), null, null);
+            		if(searchForMatchInMvg(mvgBusComp, recordForDelete))
+            		{
+            			mvgBusComp.deleteRecord();
+            			mainBusComp.writeRecord();
+            		}
                 }
             }
             catch (SiebelException e)
@@ -558,20 +557,21 @@ public class DssDataBean implements IDssDataBean
             	if(mvgBusComp != null)
             		mvgBusComp.release();
             	
-            	reset();
+            	if(mainBusComp!=null) mainBusComp.release();
             }
 		}
 
 		return false;
 	}
-	
-	public boolean siebelSynchronize(SiebelSynchronizable exampleObj, List<? extends SiebelSynchronizable> records)
+
+    public boolean siebelSynchronize(SiebelSynchronizable exampleObj, List<? extends SiebelSynchronizable> records)
 	{
+	    BusComp mainBusComp = null;
 		try
 		{
-			setupForQuery(exampleObj, false);
+		    mainBusComp = setupForQuery(exampleObj, false);
 
-			mainBusComp.executeQuery(false);
+		    mainBusComp.executeQuery(false);
 			if(mainBusComp.firstRecord())
 			{
 				deleteRowsNotInPropertySet(mainBusComp, exampleObj, records);
@@ -584,17 +584,17 @@ public class DssDataBean implements IDssDataBean
 		}
 		finally
 		{
-			reset();
+		    if(mainBusComp!=null) mainBusComp.release();
 		}
 
 		return true;
 	}
 	
-	public DssSiebelService getService(String serviceName)
+	public SiebelServiceWrapper getService(String serviceName)
 	{
 		try
         {
-            return new DssSiebelService(databean.getService(serviceName));
+            return new SiebelServiceWrapper(databean.getService(serviceName));
         }
         catch (SiebelException e)
         {
@@ -610,7 +610,7 @@ public class DssDataBean implements IDssDataBean
 	 * @param externalDataRows
 	 * @throws SiebelException
 	 */
-	private void deleteRowsNotInPropertySet(DssBusComp busComp, SiebelSynchronizable exampleObject,
+	private void deleteRowsNotInPropertySet(BusComp busComp, SiebelSynchronizable exampleObject,
 											List<? extends SiebelSynchronizable> externalDataRows) throws SiebelException
 	{
 		boolean moreRecords = true;
@@ -633,12 +633,12 @@ public class DssDataBean implements IDssDataBean
 		return;
 	}
 	
-	private void insertRowsNotInBusComp(DssBusComp busComp, List<?> propertySet) throws SiebelException
+	private void insertRowsNotInBusComp(BusComp busComp, List<?> propertySet) throws SiebelException
 	{
 		for(Object o : propertySet)
 		{
 			busComp.clearToQuery();
-			setSearchSpecs(busComp, o, true);
+			busComp.setSearchSpecs(o, true);
 			busComp.executeQuery(false);
 			if(!busComp.firstRecord())
 			{
@@ -656,12 +656,12 @@ public class DssDataBean implements IDssDataBean
 	}
 
 
-	private boolean searchForMatchInMvg(DssBusComp mvgBusComp, Object recordForInsert) throws SiebelException
+	private boolean searchForMatchInMvg(BusComp mvgBusComp, Object recordForInsert) throws SiebelException
 	{
 		boolean found = false;
 		if(mvgBusComp.firstRecord())
 		{
-			setSearchSpecs(mvgBusComp, recordForInsert, true);
+			mvgBusComp.setSearchSpecs(recordForInsert, true);
 			found = mvgBusComp.executeQuery(true) && mvgBusComp.firstRecord();
 		}
 		return found;
@@ -674,14 +674,14 @@ public class DssDataBean implements IDssDataBean
 	//SET FIELDS IN BUSCOMP'S FOR INSERT/UPDATE
 	//************************************************************************
 	//************************************************************************
-	private void setFieldsForUpdate(DssBusComp busComp, Object obj) throws SiebelException
+	private void setFieldsForUpdate(BusComp busComp, Object obj) throws SiebelException
 	{
-		List<Field> fields = helper.getAllDeclaredInstanceFields(obj);
+		List<Field> fields = SiebelHelper.getAllDeclaredInstanceFields(obj);
 		for(Field field : fields){
             field.setAccessible(true);
-			if(!isTransientField(field) && !isManyToManyField(field) && !isReadOnlyField(field)){
-				String fieldName = helper.getFieldName(field);
-				Object fieldValueObject = helper.getFieldValueFromAccessibleField(obj, field);
+			if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isReadOnlyField(field)){
+				String fieldName = SiebelHelper.getFieldName(field);
+				Object fieldValueObject = SiebelHelper.getFieldValueFromAccessibleField(obj, field);
 				if(!field.getType().getName().equals("java.util.List"))
 				{
 					if(fieldValueObject == null)
@@ -690,7 +690,7 @@ public class DssDataBean implements IDssDataBean
 					}
 					else
 					{
-						String fieldValue = helper.convertFieldValueToSiebelValue(field, fieldValueObject);
+						String fieldValue = SiebelHelper.convertFieldValueToSiebelValue(field, fieldValueObject);
 						busComp.setFieldValue(fieldName, fieldValue);
 					}
 				}
@@ -699,18 +699,18 @@ public class DssDataBean implements IDssDataBean
 		return;
 	}
 
-    private void setFieldsForInsert(DssBusComp busComp, Object obj) throws SiebelException
+    private void setFieldsForInsert(BusComp busComp, Object obj) throws SiebelException
 	{
-		List<Field> fields = helper.getAllDeclaredInstanceFields(obj);
+		List<Field> fields = SiebelHelper.getAllDeclaredInstanceFields(obj);
         for(Field field : fields){
             field.setAccessible(true);
-			if(!isTransientField(field) && !isManyToManyField(field) && !isReadOnlyField(field)){
-				String fieldName = helper.getFieldName(field);
-				Object fieldValueObject = helper.getFieldValueFromAccessibleField(obj, field);
+			if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isReadOnlyField(field)){
+				String fieldName = SiebelHelper.getFieldName(field);
+				Object fieldValueObject = SiebelHelper.getFieldValueFromAccessibleField(obj, field);
 
 				if(fieldValueObject != null && !field.getType().equals(List.class))
 				{
-                    String fieldValue = helper.convertFieldValueToSiebelValue(field, fieldValueObject);
+                    String fieldValue = SiebelHelper.convertFieldValueToSiebelValue(field, fieldValueObject);
 					busComp.setFieldValue(fieldName, fieldValue);
 				}
 			}
@@ -725,96 +725,6 @@ public class DssDataBean implements IDssDataBean
 	//************************************************************************
 	//************************************************************************
 	
-	private void activateFields(DssBusComp busComp, Object obj) throws SiebelException
-	{
-		List<Field> fields = helper.getAllDeclaredInstanceFields(obj);
-		for(Field field : fields)
-		{
-			if(!isTransientField(field) && !isManyToManyField(field))
-			{
-				String fieldName = helper.getFieldName(field);
-				busComp.activateField(fieldName);
-			}
-		}
-		return;
-	}
-
-	private boolean isTransientField(Field field)
-	{
-		return field.getAnnotation(Transient.class) != null;
-	}
-	
-	private boolean isManyToManyField(Field field)
-	{
-		return field.getAnnotation(ManyToMany.class) != null;
-	}
-	
-	private boolean isKeyField(Field field)
-	{
-		return field.getAnnotation(Key.class) != null;
-	}
-	
-	private boolean isReadOnlyField(Field field)
-	{
-		ReadOnly ro = field.getAnnotation(ReadOnly.class);
-		
-		return ro!=null;
-	}
-	
-
-	/**
-	 * Copy all values from Object -> BusinessComponent to prepare for search query
-	 * used by:
-	 * 		-siebelSelect
-	 * 		-siebelListSelect
-	 * @param busComp
-	 * @param obj
-	 * @param keyMatters (for distinguishing b/w plain select & select for an update)
-	 * @return
-	 * @throws SiebelException
-	 * @throws IllegalArgumentException if all nulls are searched for (this would return all rows in all of Siebel and we don't want that!)
-	 */
-	private void setSearchSpecs(DssBusComp busComp, Object obj, boolean keyMatters) throws SiebelException
-	{
-		boolean emptyQuery = true;
-
-		List<Field> fields = helper.getAllDeclaredInstanceFields(obj);
-        for(Field field : fields)
-		{
-            field.setAccessible(true);
-			if (!isTransientField(field) && !isManyToManyField(field) && !(keyMatters && !isKeyField(field)))
-			{
-				try
-                {
-                    if(field.get(obj) != null)
-                    {
-                    	Object fieldValueObject = helper.getFieldValueFromAccessibleField(obj, field);
-                    	String fieldName = helper.getFieldName(field);
-                    	String fieldValue = helper.convertFieldValueToSiebelValue(field,fieldValueObject);
-                    	if(!Util.isBlank(fieldValue))
-                    	{
-                    		emptyQuery = false;
-                    		busComp.setSearchSpec(fieldName,fieldValue);
-                    	}
-                    }
-                }
-                catch (IllegalAccessException e)
-                {
-                    throw new AssertionError("field " + field + " was forced to be accessible");
-                }
-			}
-		}
-		if(emptyQuery)
-		{
-			//it's ok not to check for null b/c we have to have @BusinessComp to be this far.  it's already been checked
-			if(!obj.getClass().getAnnotation(BusinessComp.class).blankQuery())	
-			{
-				String errorMsg = "Blank Query (all nulls) found in SiebelDataBean for Object: " + obj.getClass().getName();
-				throw new IllegalArgumentException(errorMsg);
-			}
-		}
-	}
-
 	/**
 	 * Method takes data from a SiebelBusinessComponent after query and moves data back into the entity
 	 * object.
@@ -826,25 +736,25 @@ public class DssDataBean implements IDssDataBean
 	 * @return
 	 * @throws Exception 
 	 */
-	private void copySearchResultsToEntityObject(DssBusComp busComp, Object obj)
+	private void copySearchResultsToEntityObject(BusComp busComp, Object obj)
 	{
-		List<Field> fields = helper.getAllDeclaredInstanceFields(obj);
+		List<Field> fields = SiebelHelper.getAllDeclaredInstanceFields(obj);
         for(Field field : fields){
             field.setAccessible(true);
-			if(!isTransientField(field) && !isManyToManyField(field)){
-				String fieldName = helper.getFieldName(field);
+			if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field)){
+				String fieldName = SiebelHelper.getFieldName(field);
 				Class<?> fieldType = field.getType();
 				String fieldValue = getFieldValue(busComp, fieldName);
 				
-			    Object convertedValue = helper.convertSiebelValueToFieldValue(fieldType, fieldValue);
+			    Object convertedValue = SiebelHelper.convertSiebelValueToFieldValue(fieldType, fieldValue);
 				
-			    helper.setFieldValueToAccessibleField(obj, field, convertedValue);
+			    SiebelHelper.setFieldValueToAccessibleField(obj, field, convertedValue);
 			}
 		}
 		return;
 	}
 
-    private String getFieldValue(DssBusComp busComp, String fieldName) 
+    private String getFieldValue(BusComp busComp, String fieldName) 
     {
         try
         {
@@ -871,41 +781,27 @@ public class DssDataBean implements IDssDataBean
 	 * @throws IllegalAccessException
 	 * @throws FatalException -- could come from this method (failed query) or populateBusinessComp
 	 */
-	private void setupForQuery(Object obj, boolean forUpdate) throws SiebelException
+	private BusComp setupForQuery(Object obj, boolean forUpdate) throws SiebelException
 	{
-		loadBusinessObject(obj);
-		loadBusinessComponent(obj);
+	    BusComp busComp = loadCompAndObj(obj);
 
-    	prepareForQuery(mainBusComp, obj, forUpdate, true);
-	}
-	
-	private void prepareForQuery(DssBusComp dssBusComp, Object obj, boolean forUpdate, boolean setViewMode) throws SiebelException
-	{
-		activateFields(dssBusComp, obj);
-
-		if(setViewMode)
-			dssBusComp.setViewMode(3);
-		
-		dssBusComp.clearToQuery();
-
-		setSearchSpecs(dssBusComp, obj, forUpdate);
+    	busComp.prepareForQuery(obj, forUpdate, true);
+    	return busComp;
 	}
 
-
-
-	//************************************************************************
-	//************************************************************************
-	//LOAD BC/BO METHODS
-	//************************************************************************
-	//************************************************************************
+    private BusComp loadCompAndObj(Object obj) throws SiebelException
+    {
+        SiebelBusObject busObj = loadBusinessObject(obj.getClass());
+        return loadBusinessComponent(obj.getClass(), busObj);
+    }
 	
-	private BusinessComp getBusinessComponent(Object obj)
+	private BusinessComp getBusinessComponent(Class<?> type)
 	{
-		BusinessComp bc = obj.getClass().getAnnotation(BusinessComp.class);
+		BusinessComp bc = type.getAnnotation(BusinessComp.class);
 
 		if(bc == null)
 		{
-			Class<?>[] classes = obj.getClass().getInterfaces();
+			Class<?>[] classes = type.getInterfaces();
 			for(int i=0; (bc==null && i<classes.length); i++)
 				bc = (BusinessComp) classes[i].getAnnotation(BusinessComp.class);
 		}
@@ -913,24 +809,24 @@ public class DssDataBean implements IDssDataBean
 		return bc;
 	}
 
-	private void loadBusinessComponent(Object obj) throws SiebelException
+	private BusComp loadBusinessComponent(Class<?> type, SiebelBusObject busObj) throws SiebelException
 	{
-		BusinessComp bc = getBusinessComponent(obj);
+		BusinessComp bc = getBusinessComponent(type);
 		
 		if(bc != null)
 		{
-			mainBusComp = new DssBusComp(busObj.getBusComp(bc.name()), bc.name());
+			return new BusComp(busObj.getBusComp(bc.name()), bc.name(), busObj);
 		}
 		
-		return;
+		return null;
 	}
 
-	private void loadBusinessObject(Object obj) throws SiebelException
+	private SiebelBusObject loadBusinessObject(Class<?> type) throws SiebelException
 	{
-		BusinessObject bo = obj.getClass().getAnnotation(BusinessObject.class);
+		BusinessObject bo = type.getAnnotation(BusinessObject.class);
 		if(bo == null)
 		{
-			Class<?>[] classes = obj.getClass().getInterfaces();
+			Class<?>[] classes = type.getInterfaces();
 			for(int i=0; (bo==null && i<classes.length); i++)
 			{
 				bo = (BusinessObject) classes[i].getAnnotation(BusinessObject.class);
@@ -940,22 +836,12 @@ public class DssDataBean implements IDssDataBean
 		if(bo != null)
 		{
 			String boName = bo.name();
-			busObj = databean.getBusObject(boName);
+			return databean.getBusObject(boName);
 		}
 
-		return;
+		return null;
 	}
-
-
-	public void reset()
-	{
-		if(mainBusComp!=null)mainBusComp.release();
-		if(busObj!=null)busObj.release();
-
-		busObj = null;
-		mainBusComp = null;
-	}
-
+	
 	public String getSystem()
 	{
 		return system;
@@ -970,4 +856,9 @@ public class DssDataBean implements IDssDataBean
 	{
 		return this.databean;
 	}
+
+    public void reset()
+    {
+        // do nothing currently
+    }
 }

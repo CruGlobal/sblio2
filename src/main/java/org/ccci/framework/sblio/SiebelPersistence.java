@@ -10,7 +10,7 @@ import com.siebel.data.SiebelException;
  * @author Matt Drees
  *
  */
-public interface IDssDataBean
+public interface SiebelPersistence
 {
     /**
      * This method takes an object with certain fields populated with data
@@ -56,9 +56,8 @@ public interface IDssDataBean
 	 */
 	public String siebelUpsert(Object object);
 	
-	public String siebelInsertMvgField(Object parentObj, Object recordForUpsert);
-	public String siebelInsertMvgField(Object parentObj, Object recordForUpsert, boolean manyToMany);
-	public String siebelUpsertMvgField(Object parentObj, Object recordForUpsert);
+	public String siebelInsertMvgField(Object parentObj, String fieldName, Object recordForUpsert);
+	public String siebelUpsertMvgField(Object parentObj, String fieldName, Object recordForUpsert);
 	
 	/**
 	 * If a parent row exists and the..
@@ -66,7 +65,7 @@ public interface IDssDataBean
 	 * @param childObj
 	 * @return
 	 */
-	public String siebelSetMvgPrimaryRecord(Object parentObj, Object childObj);
+	public String siebelSetMvgPrimaryRecord(Object parentObj, String fieldName, Object childObj);
 	/**
 	 * Deletes the row corresponding to the given object.
 	 * A siebel query is executed for rows that match the given object (as in {@link #siebelSelect(Object)}, and then the first matching
@@ -79,13 +78,14 @@ public interface IDssDataBean
 	public boolean siebelDelete(Object object);
 	
 	public boolean siebelDeleteAll(Object obj);
-	public boolean siebelDeleteMvgField(Object parentObj, Object recordForDelete);
+	public boolean siebelDeleteMvgField(Object parentObj, String fieldName, Object recordForDelete);
 	public boolean siebelSynchronize(SiebelSynchronizable exampleObj, List<? extends SiebelSynchronizable> records);	
 
 	
-	public DssSiebelService getService(String serviceName);
-	public void reset();
+	public SiebelServiceWrapper getService(String serviceName);
 	public com.siebel.data.SiebelDataBean getDataBean();
 	public String getUsername();
 	public String getSystem();
+
+    public void reset();
 }

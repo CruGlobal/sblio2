@@ -10,17 +10,17 @@ import com.siebel.data.SiebelException;
 
 public class DatabeanProxy implements java.lang.reflect.InvocationHandler
 {
-	private IDssDataBean databean;
+	private SiebelPersistence databean;
 	private CcciFailoverManager failoverManager;
 	
-	public static IDssDataBean wrapDatabean(IDssDataBean databean, CcciFailoverManager failoverManager)
+	public static SiebelPersistence wrapDatabean(SiebelPersistence databean, CcciFailoverManager failoverManager)
 	{
-		return (IDssDataBean) java.lang.reflect.Proxy.newProxyInstance(databean.getClass().getClassLoader(), 
+		return (SiebelPersistence) java.lang.reflect.Proxy.newProxyInstance(databean.getClass().getClassLoader(), 
 														databean.getClass().getInterfaces(), 
 														new DatabeanProxy(databean, failoverManager));
 	}
 	
-	private DatabeanProxy(IDssDataBean databean, CcciFailoverManager failoverManager)
+	private DatabeanProxy(SiebelPersistence databean, CcciFailoverManager failoverManager)
 	{
 		this.databean = databean;
 		this.failoverManager = failoverManager;

@@ -62,7 +62,7 @@ public class SiebelDataBeanPoolList {
      * @return
      * @throws Exception
      */
-    public IDssDataBean getDataBean(String system, String username) throws Exception
+    public SiebelPersistence getDataBean(String system, String username) throws Exception
     {
         // detect and clear leaks... (since the allActiveDbios code is not fully tested)
         if (allActiveDataBeans.size()>20) allActiveDataBeans.clear();
@@ -113,7 +113,7 @@ public class SiebelDataBeanPoolList {
         
         try
         {
-            IDssDataBean sblio = (DssDataBean)pool.borrowObject();
+            SiebelPersistence sblio = (SiebelPersistenceImpl)pool.borrowObject();
 
             Exception ex = new Exception("SiebelDataBean allocated here");
             StringWriter sw = new StringWriter();
@@ -164,7 +164,7 @@ public class SiebelDataBeanPoolList {
             // if not re-thrown, then try again (if this throws, then let it go)
             // need to get a new pool!!
             pool = (GenericObjectPool)list.get(system+"|"+username);
-            IDssDataBean sblio = (DssDataBean)pool.borrowObject();
+            SiebelPersistence sblio = (SiebelPersistenceImpl)pool.borrowObject();
 
             Exception ex = new Exception("SiebelDataBean allocated here");
             StringWriter sw = new StringWriter();
@@ -176,7 +176,7 @@ public class SiebelDataBeanPoolList {
         }
     }
     
-    public IDssDataBean getDataBean(String system, String username, String url, String password) throws Exception
+    public SiebelPersistence getDataBean(String system, String username, String url, String password) throws Exception
     {
         // detect and clear leaks... (since the allActiveDbios code is not fully tested)
         if (allActiveDataBeans.size()>20) allActiveDataBeans.clear();
@@ -235,7 +235,7 @@ public class SiebelDataBeanPoolList {
         
         try
         {
-            IDssDataBean sblio = (IDssDataBean)pool.borrowObject();
+            SiebelPersistence sblio = (SiebelPersistence)pool.borrowObject();
 
             Exception ex = new Exception("SiebelDataBean allocated here");
             StringWriter sw = new StringWriter();
@@ -286,7 +286,7 @@ public class SiebelDataBeanPoolList {
             // if not re-thrown, then try again (if this throws, then let it go)
             // need to get a new pool!!
             pool = (GenericObjectPool)list.get(system+"|"+username);
-            IDssDataBean sblio = (DssDataBean)pool.borrowObject();
+            SiebelPersistence sblio = (SiebelPersistenceImpl)pool.borrowObject();
 
             Exception ex = new Exception("SiebelDataBean allocated here");
             StringWriter sw = new StringWriter();
@@ -301,7 +301,7 @@ public class SiebelDataBeanPoolList {
     /**
      * Release a databean that has been gotten from this list.
      */
-    public synchronized void releaseDataBean(IDssDataBean databean) throws Exception
+    public synchronized void releaseDataBean(SiebelPersistence databean) throws Exception
     {
         databean.reset();
         allActiveDataBeans.remove(databean);
@@ -320,7 +320,7 @@ public class SiebelDataBeanPoolList {
         return;
     }
     
-    public synchronized void killDataBean(IDssDataBean databean) throws Exception
+    public synchronized void killDataBean(SiebelPersistence databean) throws Exception
     {
     	allActiveDataBeans.remove(databean);
 //    	databean.getDataBean().logoff(); --apparently this causes an error too

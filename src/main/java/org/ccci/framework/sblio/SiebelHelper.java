@@ -21,7 +21,7 @@ import org.joda.time.LocalDate;
  * @author Matt Drees
  *
  */
-public class DssDataBeanHelper
+public class SiebelHelper
 {
 	
 	/**
@@ -31,7 +31,7 @@ public class DssDataBeanHelper
      * @param camelCase
      * @return
      */
-    public String convertCamelCaseToSpaces(String camelCase)
+    public static String convertCamelCaseToSpaces(String camelCase)
     {
     	if(Util.isBlank(camelCase)) return camelCase;
     	
@@ -56,7 +56,7 @@ public class DssDataBeanHelper
      * @param spaces
      * @return
      */
-    public String convertSpacesToCamelCase(String spaces)
+    public static String convertSpacesToCamelCase(String spaces)
     {
         StringBuffer camelCase = new StringBuffer();
         boolean nextIsSpace = false;
@@ -78,7 +78,7 @@ public class DssDataBeanHelper
         return camelCase.toString();
     }
     
-    public String getFieldName(Field field){
+    public static String getFieldName(Field field){
     	field.setAccessible(true);
     	
 		String fieldName;
@@ -94,7 +94,7 @@ public class DssDataBeanHelper
     
 
 
-    private Field getSiebelValueField(Class<?> enumType)
+    private static Field getSiebelValueField(Class<?> enumType)
     {
         Field[] fields = enumType.getDeclaredFields();
         for(Field field : fields)
@@ -108,7 +108,7 @@ public class DssDataBeanHelper
         ));
     }
 
-    Object getFieldValueFromAccessibleField(Object obj, Field field) throws AssertionError
+    static Object getFieldValueFromAccessibleField(Object obj, Field field) throws AssertionError
     {
         Object fieldValueObject;
         try
@@ -123,7 +123,7 @@ public class DssDataBeanHelper
     }
 
 
-    String convertFieldValueToSiebelValue(Field field, Object fieldValueObject)
+    static String convertFieldValueToSiebelValue(Field field, Object fieldValueObject)
     {
         String fieldValue = "";
         Class<?> fieldType = field.getType();
@@ -159,7 +159,7 @@ public class DssDataBeanHelper
         return fieldValue;
     }
 
-    String convertEnumToSiebelCode(Enum<?> enumValue, Field columnField)
+    static String convertEnumToSiebelCode(Enum<?> enumValue, Field columnField)
     {
         Field[] fields = enumValue.getClass().getDeclaredFields();
         for(Field field : fields){
@@ -189,7 +189,7 @@ public class DssDataBeanHelper
         ));
     }
 
-    void setFieldValueToAccessibleField(Object obj, Field field, Object convertedValue)
+    static void setFieldValueToAccessibleField(Object obj, Field field, Object convertedValue)
     {
         try
         {
@@ -202,7 +202,7 @@ public class DssDataBeanHelper
     }
 
     
-    Object convertSiebelValueToFieldValue(Class<?> fieldType, String fieldValue)
+    static Object convertSiebelValueToFieldValue(Class<?> fieldType, String fieldValue)
     {
         if(fieldType.equals(String.class)){
             return fieldValue; //some existing code is depending on blank strings instead of nulls
@@ -258,17 +258,17 @@ public class DssDataBeanHelper
         }
     }
 
-    private DateTime parseDateTime(String fieldValue)
+    static private DateTime parseDateTime(String fieldValue)
     {
         return SiebelUtil.DATE_TIME_FORMATTER.parseDateTime(fieldValue);
     }
 
-    private LocalDate parseLocalDate(String fieldValue)
+    static private LocalDate parseLocalDate(String fieldValue)
     {
         return SiebelUtil.LOCAL_DATE_FORMATTER.parseDateTime(fieldValue).toLocalDate();
     }
 
-    <T extends Enum<T>> T convertSiebelCodeToEnum(Class<T> enumType, String siebelFieldValue)
+    static <T extends Enum<T>> T convertSiebelCodeToEnum(Class<T> enumType, String siebelFieldValue)
     {
         EnumSet<T> possibleEnumValues = EnumSet.allOf(enumType);
         
@@ -299,7 +299,7 @@ public class DssDataBeanHelper
      * @param obj
      * @return
      */
-    List<Field> getAllDeclaredInstanceFields(Object obj)
+    static List<Field> getAllDeclaredInstanceFields(Object obj)
     {
         Field[] fields;
         ArrayList<Field> fieldList = new ArrayList<Field>();
@@ -319,5 +319,18 @@ public class DssDataBeanHelper
         }
         
         return fieldList;
+    }
+    
+    public static Field getField(Class clazz, String fieldName)
+    {
+        while(!clazz.getName().equals("java.lang.Object"))
+        {
+            for(Field f : clazz.getDeclaredFields())
+            {
+                if(f.getName().equals(fieldName)) return f;
+            }
+            clazz = clazz.getSuperclass();
+        }
+        return null;
     }
 }
