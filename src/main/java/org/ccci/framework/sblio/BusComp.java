@@ -194,7 +194,7 @@ public class BusComp
         for(Field field : fields)
     	{
             field.setAccessible(true);
-    		if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isManyToManyField(field) && !(keyMatters && !SiebelUtil.isKeyField(field)))
+    		if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !(keyMatters && !SiebelUtil.isKeyField(field)))
     		{
     			try
                 {
