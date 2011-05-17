@@ -2,6 +2,7 @@ package org.ccci.framework.sblio;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.ccci.exceptions.FatalException;
@@ -141,7 +142,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 				if (fieldMetadata != null && fieldMetadata.cascadeLoad())
 				{
 				    String siebelName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, f.getName());
-					f.set(parentObj, siebelListSelectMvg(parentBusComp, siebelName, fieldMetadata.clazz().newInstance()));
+					f.set(parentObj, siebelSelectMvg(parentBusComp, siebelName, fieldMetadata.clazz().newInstance()));
 				}
 			}
 
@@ -157,7 +158,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 	 * @param exampleChildObject
 	 * @return
 	 */
-    private <T> List<T> siebelListSelectMvg(BusComp mainBusComp, String fieldName, T exampleChildObject) 
+    private <T> Collection<T> siebelSelectMvg(BusComp mainBusComp, String fieldName, T exampleChildObject) 
 	{
         if (exampleChildObject == null)
             throw new NullPointerException("query object is null");
@@ -166,7 +167,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 
         try
         {
-    		List<T> returnList = new ArrayList<T>();
+    		Collection<T> collection = new ArrayList<T>();
     		
     		tempBusComp = new BusComp(mainBusComp.getMVGBusComp(fieldName), null, null);
     		
@@ -183,17 +184,17 @@ public class SiebelPersistenceImpl implements SiebelPersistence
     				T tempObj = instantiate(objType);
     				copySearchResultsToEntityObject(tempBusComp, tempObj);
     				cascadeLoadRelationships(tempBusComp, tempObj);
-    				returnList.add(tempObj);
+    				collection.add(tempObj);
     			}
     			while(tempBusComp.nextRecord());
     		}
     		
-    		return returnList;
+    		return collection;
 
         }
         catch (SiebelException e)
         {
-            throw new SblioException("Unable to perform list select on " + exampleChildObject, e);
+            throw new SblioException("Unable to perform select on " + exampleChildObject, e);
         }
         finally
         {
