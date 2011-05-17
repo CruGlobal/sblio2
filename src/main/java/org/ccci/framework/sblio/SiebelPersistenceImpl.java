@@ -92,7 +92,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 
 	public int siebelSelect(Object obj)
 	{
-		long end = System.currentTimeMillis();
 		BusComp mainBusComp = null;
 		try
         {
@@ -110,13 +109,9 @@ public class SiebelPersistenceImpl implements SiebelPersistence
     			// this is for callers who depend on exactly one match, if there's another record, increment match, but still only return the first
     			if(mainBusComp.nextRecord()) count++;		
     			
-    			end = System.currentTimeMillis();
-    			
     			return count;
     		}
     		    		
-    		end = System.currentTimeMillis();
-    
     		return 0;
         }
         catch (SiebelException e)
@@ -126,7 +121,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
         finally
         {
             if(mainBusComp!=null) mainBusComp.release();
-//        	Logger.getLogger("Siebel").debug("SiebelSelect query finished. Time: " + String.valueOf(end-start) + ". MainBusComp: " + mainBusComp.getName());
         }
 	}
 
@@ -152,13 +146,13 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 	}
 
 	/**
-	 * Iterate through the instances of mvgObject in the context of mainBusComp
+	 * Iterate through the instances of mvgObject in the context of the specified business component
 	 * @param <T>
-	 * @param mainBusComp
+	 * @param busComp
 	 * @param exampleChildObject
 	 * @return
 	 */
-    private <T> Collection<T> siebelSelectMvg(BusComp mainBusComp, String fieldName, T exampleChildObject) 
+    private <T> Collection<T> siebelSelectMvg(BusComp busComp, String fieldName, T exampleChildObject) 
 	{
         if (exampleChildObject == null)
             throw new NullPointerException("query object is null");
@@ -169,7 +163,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
         {
     		Collection<T> collection = new ArrayList<T>();
     		
-    		tempBusComp = new BusComp(mainBusComp.getMVGBusComp(fieldName), null, null);
+    		tempBusComp = new BusComp(busComp.getMVGBusComp(fieldName), null, null);
     		
         	tempBusComp.prepareForQuery(exampleChildObject, false, true);
 
@@ -183,7 +177,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
     			{
     				T tempObj = instantiate(objType);
     				copySearchResultsToEntityObject(tempBusComp, tempObj);
-    				cascadeLoadRelationships(tempBusComp, tempObj);
     				collection.add(tempObj);
     			}
     			while(tempBusComp.nextRecord());
@@ -205,9 +198,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 
     public <T> List<T> siebelListSelect(T obj) 
 	{
-    	long end = System.currentTimeMillis();
-		long start = end;
-		
         if (obj == null)
             throw new NullPointerException("query object is null");
         
@@ -226,11 +216,11 @@ public class SiebelPersistenceImpl implements SiebelPersistence
     			{
     				T tempObj = instantiate(objType);
     				copySearchResultsToEntityObject(mainBusComp, tempObj);
+    				cascadeLoadRelationships(mainBusComp, tempObj);
     				returnList.add(tempObj);
     			}
     			while(mainBusComp.nextRecord());
     		}
-    		end = System.currentTimeMillis();
     		
     		return returnList;
         }
@@ -241,7 +231,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
         finally
         {
             if(mainBusComp!=null) mainBusComp.release();
-//        	Logger.getLogger("Siebel").debug("SiebelListSelect query finished. Time: " + String.valueOf(end-start) + ". MainBusComp: " + mainBusComp.getName());
         }
 	}
 
