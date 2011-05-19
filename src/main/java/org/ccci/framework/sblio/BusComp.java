@@ -153,7 +153,7 @@ public class BusComp
     	List<Field> fields = SiebelHelper.getAllDeclaredInstanceFields(obj);
     	for(Field field : fields)
     	{
-    		if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isManyToManyField(field))
+    		if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field))
     		{
     			String fieldName = SiebelHelper.getFieldName(field);
     			activateField(fieldName);

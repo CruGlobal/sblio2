@@ -55,6 +55,8 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		databean = new SiebelDataBean();
 		try
 		{
+		    this.username = username;
+		    this.url = url;
 			databean.login(url, username, password, "enu");
 		}
 		catch(SiebelException se)
@@ -850,5 +852,19 @@ public class SiebelPersistenceImpl implements SiebelPersistence
     public void reset()
     {
         // do nothing currently
+    }
+
+    public void close() throws Exception
+    {
+        databean.logoff();
+        databean = null;
+    }
+    
+    @Override
+    protected void finalize() throws Throwable
+    {
+        // TODO Auto-generated method stub
+        super.finalize();
+        if(databean!=null) databean.logoff();
     }
 }

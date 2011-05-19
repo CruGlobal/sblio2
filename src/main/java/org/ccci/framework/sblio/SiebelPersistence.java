@@ -88,4 +88,6 @@ public interface SiebelPersistence
 	public String getSystem();
 
     public void reset();
+    
+    public void close() throws Exception;
 }

@@ -108,4 +108,8 @@ public class BadSiebelPersistence implements SiebelPersistence
 		return null;
 	}
 
+    public void close() throws Exception
+    {
+    }
+
 }
