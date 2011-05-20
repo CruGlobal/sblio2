@@ -11,7 +11,7 @@ import org.ccci.util.Util;
 
 import com.siebel.data.SiebelException;
 
-public class SiebelDataBeanFactory extends BasePoolableObjectFactory
+public class SiebelPersistenceFactory extends BasePoolableObjectFactory
 {
 	private static final String MODULE_NAME = "default";
 	private Logger siebelLog = Logger.getLogger("Siebel");
@@ -23,7 +23,7 @@ public class SiebelDataBeanFactory extends BasePoolableObjectFactory
 	private String username;
 	private String password;
 	
-	public SiebelDataBeanFactory()
+	public SiebelPersistenceFactory()
 	{
 		super();
 	}
@@ -32,7 +32,7 @@ public class SiebelDataBeanFactory extends BasePoolableObjectFactory
      * @param system
      * @param username
      */
-    public SiebelDataBeanFactory(String system, String username, CcciFailoverManager fm)
+    public SiebelPersistenceFactory(String system, String username, CcciFailoverManager fm)
     {
         this.system = system;
         this.username = username;
@@ -40,7 +40,7 @@ public class SiebelDataBeanFactory extends BasePoolableObjectFactory
     }
     
     @Deprecated
-    public SiebelDataBeanFactory(String url, String username, String password, CcciFailoverManager fm)
+    public SiebelPersistenceFactory(String url, String username, String password, CcciFailoverManager fm)
     {
     	super();
     	this.url = url;
@@ -59,21 +59,21 @@ public class SiebelDataBeanFactory extends BasePoolableObjectFactory
     	
     	try
     	{
-    	    SiebelPersistence databean;
+    	    SiebelPersistence persistence;
     		url = SiebelSettings.getProps().getProperty(system + "." + "url");
     		if(Util.isBlank(username)) username = SiebelSettings.getProps().getProperty(system + "." + "defaultUser");
     		password = SiebelSettings.getProps().getProperty(system + "." + username);
     		
     		if(this.failoverManager == null)
     		{
-    			databean = new SiebelPersistenceImpl(username,password,url);
+    			persistence = new SiebelPersistenceImpl(username,password,url);
     		}
     		else
     		{
-    			databean = DatabeanProxy.wrapDatabean(new SiebelPersistenceImpl(username,password,url), failoverManager);
+    			persistence = DatabeanProxy.wrapDatabean(new SiebelPersistenceImpl(username,password,url), failoverManager);
     		}
     		
-    		return databean;
+    		return persistence;
     	}
     	catch(SiebelUnavailableException e)
     	{

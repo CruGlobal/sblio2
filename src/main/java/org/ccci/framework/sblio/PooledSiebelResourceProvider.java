@@ -44,20 +44,20 @@ public class PooledSiebelResourceProvider implements IResourceProvider
 	{
 		if(resourceNames.contains(name))
 		{
-		    SiebelPersistence bean = SiebelDataBeanPoolList.getInstance().getDataBean(useDev?"DEV":"TEST", null, null, null);
+		    SiebelPersistence persistence = SiebelPersistencePoolList.getInstance().getPersistenceSession(useDev?"DEV":"TEST", null, null, null);
 			try
 			{
-				bean.getDataBean().getBusObject("Account");
-				bean.reset();
-				return bean;
+				persistence.getDataBean().getBusObject("Account");
+				persistence.reset();
+				return persistence;
 			}
 			catch(SiebelException se)
 			{
-				SiebelDataBeanPoolList.getInstance().killDataBean(bean);
-				bean = SiebelDataBeanPoolList.getInstance().getDataBean(useDev?"DEV":"DEV", null, null, null);
-				bean.getDataBean().getBusObject("Account");
-				bean.reset();
-				return bean;	
+				SiebelPersistencePoolList.getInstance().killPersistenceSession(persistence);
+				persistence = SiebelPersistencePoolList.getInstance().getPersistenceSession(useDev?"DEV":"DEV", null, null, null);
+				persistence.getDataBean().getBusObject("Account");
+				persistence.reset();
+				return persistence;	
 			}
 		}
 		return null;
@@ -72,9 +72,9 @@ public class PooledSiebelResourceProvider implements IResourceProvider
 	{
 		if(resource instanceof SiebelPersistence)
 		{
-		    SiebelPersistence databean = (SiebelPersistence)resource;
-			databean.reset();
-			SiebelDataBeanPoolList.getInstance().releaseDataBean(databean);
+		    SiebelPersistence persistence = (SiebelPersistence)resource;
+			persistence.reset();
+			SiebelPersistencePoolList.getInstance().releasePersistenceSession(persistence);
 		}
 
 	}

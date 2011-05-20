@@ -15,7 +15,7 @@ import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 
 /**
- * Contains uninteresting conversion logic used by {@link DssDataBean}.
+ * Contains uninteresting conversion logic used by {@link SiebelPersistence}.
  * 
  * @author Ryan Carlson
  * @author Matt Drees

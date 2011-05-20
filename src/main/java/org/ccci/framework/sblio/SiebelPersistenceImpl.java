@@ -20,7 +20,7 @@ import com.siebel.data.SiebelException;
  * See "Java Data Bean Quick Reference" at http://download.oracle.com/docs/cd/B40099_02/books/OIRef/OIRefJava_QR.html for elaboration
  * on the jdb api.  The javadocs are not very complete.
  * 
- * This class is not threadsafe; only one thread should use an DssDataBean instance at a time.
+ * This class is probably not threadsafe; only one thread should use an SiebelPersistence instance at a time.
  * 
  * @author Ryan Carlson
  * @author Matt Drees

@@ -7,7 +7,7 @@ import java.util.Hashtable;
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.log4j.Logger;
 
-public class SiebelDataBeanPoolList {
+public class SiebelPersistencePoolList {
     private static final String DEFAULT_IDLE_TIMEOUT = "300000";
     private static final String DEFAULT_MIN_IDLE = "2";
     private static final String DEFAULT_MAX_IDLE = "5";
@@ -19,11 +19,11 @@ public class SiebelDataBeanPoolList {
     
     private Hashtable list = new Hashtable();
     
-    private Hashtable allActiveDataBeans = new Hashtable();
+    private Hashtable allActivePersistenceSessions = new Hashtable();
     
-    private static SiebelDataBeanPoolList instance;
+    private static SiebelPersistencePoolList instance;
     
-    private SiebelDataBeanPoolList()
+    private SiebelPersistencePoolList()
     {
     }
     
@@ -31,9 +31,9 @@ public class SiebelDataBeanPoolList {
      * Static method for getting the singleton instance of the pool list.
      * @return
      */
-    public synchronized static SiebelDataBeanPoolList getInstance()
+    public synchronized static SiebelPersistencePoolList getInstance()
     {
-        if(instance==null) instance = new SiebelDataBeanPoolList();
+        if(instance==null) instance = new SiebelPersistencePoolList();
         return instance;
     }
 
@@ -62,10 +62,10 @@ public class SiebelDataBeanPoolList {
      * @return
      * @throws Exception
      */
-    public SiebelPersistence getDataBean(String system, String username) throws Exception
+    public SiebelPersistence getPersistenceSession(String system, String username) throws Exception
     {
         // detect and clear leaks... (since the allActiveDbios code is not fully tested)
-        if (allActiveDataBeans.size()>20) allActiveDataBeans.clear();
+        if (allActivePersistenceSessions.size()>20) allActivePersistenceSessions.clear();
                 
         if(system==null || system.trim().length()==0)
         {
@@ -74,7 +74,7 @@ public class SiebelDataBeanPoolList {
         if(username==null || username.trim().length()==0)
         {
             username = SiebelSettings.props.getProperty(system+".defaultUser");
-			Logger.getLogger("Siebel").error("SiebelDataBeanPoolList:getDataBean() got default username: "+username+" for system "+system);
+			Logger.getLogger("Siebel").error("SiebelPersistencePoolList:getPersistenceObject() got default username: "+username+" for system "+system);
         }
 
         GenericObjectPool pool = null;
@@ -86,7 +86,7 @@ public class SiebelDataBeanPoolList {
 	        {
 	            // create a new pool
 	            // we should have a way of destroying pools, too
-	            pool = new GenericObjectPool(new SiebelDataBeanFactory(system,username,null));
+	            pool = new GenericObjectPool(new SiebelPersistenceFactory(system,username,null));
 
 	            int maxActive = Integer.parseInt(DEFAULT_MAX_ACTIVE);
 	            int maxIdle = Integer.parseInt(DEFAULT_MAX_IDLE);
@@ -119,10 +119,10 @@ public class SiebelDataBeanPoolList {
             StringWriter sw = new StringWriter();
             ex.printStackTrace(new PrintWriter(sw));
             String stacktrace = sw.toString();
-            allActiveDataBeans.put(sblio,stacktrace);
+            allActivePersistenceSessions.put(sblio,stacktrace);
             
             Logger.getLogger("Siebel").error("DataBean Id: " + sblio.toString());
-			Logger.getLogger("Siebel").error("SiebelDataBeanPoolList:getDataBean() " + allActiveDataBeans.size() + " of " + pool.getMaxActive() + " possible are active");
+			Logger.getLogger("Siebel").error("SiebelPersistencePoolList:getDataBean() " + allActivePersistenceSessions.size() + " of " + pool.getMaxActive() + " possible are active");
 
             sblio.reset(); //just in case it didn't get reset on the way in
             
@@ -170,16 +170,16 @@ public class SiebelDataBeanPoolList {
             StringWriter sw = new StringWriter();
             ex.printStackTrace(new PrintWriter(sw));
             String stacktrace = sw.toString();
-            allActiveDataBeans.put(sblio,stacktrace);
+            allActivePersistenceSessions.put(sblio,stacktrace);
 
             return sblio;
         }
     }
     
-    public SiebelPersistence getDataBean(String system, String username, String url, String password) throws Exception
+    public SiebelPersistence getPersistenceSession(String system, String username, String url, String password) throws Exception
     {
         // detect and clear leaks... (since the allActiveDbios code is not fully tested)
-        if (allActiveDataBeans.size()>20) allActiveDataBeans.clear();
+        if (allActivePersistenceSessions.size()>20) allActivePersistenceSessions.clear();
                 
         if(system==null || system.trim().length()==0)
         {
@@ -208,7 +208,7 @@ public class SiebelDataBeanPoolList {
 	        {
 	            // create a new pool
 	            // we should have a way of destroying pools, too
-	            pool = new GenericObjectPool(new SiebelDataBeanFactory(url, username, password, null));
+	            pool = new GenericObjectPool(new SiebelPersistenceFactory(url, username, password, null));
 
 	            int maxActive = Integer.parseInt(DEFAULT_MAX_ACTIVE);
 	            int maxIdle = Integer.parseInt(DEFAULT_MAX_IDLE);
@@ -241,10 +241,10 @@ public class SiebelDataBeanPoolList {
             StringWriter sw = new StringWriter();
             ex.printStackTrace(new PrintWriter(sw));
             String stacktrace = sw.toString();
-            allActiveDataBeans.put(sblio,stacktrace);
+            allActivePersistenceSessions.put(sblio,stacktrace);
             
             Logger.getLogger("Siebel").error("DataBean Id: " + sblio.toString());
-			Logger.getLogger("Siebel").error("SiebelDataBeanPoolList:getDataBean() " + allActiveDataBeans.size() + " of " + pool.getMaxActive() + " possible are active");
+			Logger.getLogger("Siebel").error("SiebelDataBeanPoolList:getDataBean() " + allActivePersistenceSessions.size() + " of " + pool.getMaxActive() + " possible are active");
 
             sblio.reset(); //just in case it didn't get reset on the way in
             
@@ -292,7 +292,7 @@ public class SiebelDataBeanPoolList {
             StringWriter sw = new StringWriter();
             ex.printStackTrace(new PrintWriter(sw));
             String stacktrace = sw.toString();
-            allActiveDataBeans.put(sblio,stacktrace);
+            allActivePersistenceSessions.put(sblio,stacktrace);
 
             return sblio;
         }
@@ -301,10 +301,10 @@ public class SiebelDataBeanPoolList {
     /**
      * Release a databean that has been gotten from this list.
      */
-    public synchronized void releaseDataBean(SiebelPersistence databean) throws Exception
+    public synchronized void releasePersistenceSession(SiebelPersistence databean) throws Exception
     {
         databean.reset();
-        allActiveDataBeans.remove(databean);
+        allActivePersistenceSessions.remove(databean);
         GenericObjectPool pool = null;
         pool = (GenericObjectPool)list.get(databean.getSystem()+"|"+databean.getUsername());
         
@@ -313,16 +313,16 @@ public class SiebelDataBeanPoolList {
         	throw new RuntimeException("Pool not found for databean "+databean.getSystem()+"|"+databean.getUsername());
         }
         
-		Logger.getLogger("Siebel").error("SiebelDataBeanPoolList:releaseDataBean() " + allActiveDataBeans.size() + " databeans are still active");
+		Logger.getLogger("Siebel").error("SiebelDataBeanPoolList:releaseDataBean() " + allActivePersistenceSessions.size() + " databeans are still active");
 
         pool.returnObject(databean);
         
         return;
     }
     
-    public synchronized void killDataBean(SiebelPersistence databean) throws Exception
+    public synchronized void killPersistenceSession(SiebelPersistence databean) throws Exception
     {
-    	allActiveDataBeans.remove(databean);
+    	allActivePersistenceSessions.remove(databean);
 //    	databean.getDataBean().logoff(); --apparently this causes an error too
     }
     
@@ -335,7 +335,7 @@ public class SiebelDataBeanPoolList {
     public void closeAll() throws Exception
     {
         Object[] poolsLocalCopy;
-        allActiveDataBeans.clear();
+        allActivePersistenceSessions.clear();
         synchronized(list)
         {
             poolsLocalCopy = list.values().toArray();
@@ -377,8 +377,8 @@ public class SiebelDataBeanPoolList {
     	return list;
     }
     
-    public Hashtable getAllActiveDataBeans(){
-    	return allActiveDataBeans;
+    public Hashtable getAllActivePersistenceSessions(){
+    	return allActivePersistenceSessions;
     }
 
 	public static String getDefaultMaxActive() {

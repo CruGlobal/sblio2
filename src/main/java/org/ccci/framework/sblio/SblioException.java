@@ -2,7 +2,7 @@ package org.ccci.framework.sblio;
 
 /**
  * More or less a RuntimeException wrapper for SiebelExceptions, but
- * can be used to wrap other exceptions that may occur in {@link DssDataBean} methods
+ * can be used to wrap other exceptions that may occur in {@link SiebelPersistence} methods
  * 
  * @author Matt Drees
  */
