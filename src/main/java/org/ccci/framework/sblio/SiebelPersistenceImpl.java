@@ -317,54 +317,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		return retVal;
 	}
 	
-	public String siebelSetMvgPrimaryRecord(Object parentObj, String fieldName, Object childObj)
-	{
-		BusComp childBusComp = null;
-
-		BusComp mainBusComp = null;
-		try
-		{
-		    mainBusComp = setupForQuery(parentObj, true);
-			
-		    mainBusComp.executeQuery(false);
-			
-			if(mainBusComp.firstRecord())
-			{
-			    String siebelFieldName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, fieldName);
-				
-				childBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName), null, null);
-				
-				childBusComp.activateFields(childObj);
-				
-				childBusComp.setViewMode(3);
-				childBusComp.clearToQuery();
-				
-				childBusComp.setSearchSpecs(childObj, false);
-				
-				childBusComp.executeQuery(false);
-				
-				if(childBusComp.firstRecord())
-				{
-					childBusComp.setFieldValue("SSA Primary Field", "Y");
-					mainBusComp.writeRecord();
-				}
-			}
-		}
-		catch(SiebelException se)
-		{
-			throw new SblioException("Unable to set primary record on " + childObj,se);
-		}
-		finally
-		{
-			if(childBusComp != null)
-				childBusComp.release();
-			
-			if(mainBusComp!=null) mainBusComp.release();
-		}
-		
-		return "";
-	}
-	
 	public String siebelInsertMvgField(Object parentObj, String fieldName, Object recordForUpsert)
 	{
 		return siebelUpsertMvgField(parentObj,fieldName,recordForUpsert,true);
@@ -402,7 +354,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
             		{
                     	assocBusComp = new BusComp(mvgBusComp.getAssocBusComp(), null, null);
 
-                    	assocBusComp.prepareForQuery(recordForUpsert, false, false);
+                    	assocBusComp.prepareForQuery(recordForUpsert, true, false);
 
                     	assocBusComp.executeQuery2(true, true);
 
@@ -412,13 +364,13 @@ public class SiebelPersistenceImpl implements SiebelPersistence
                 			assocBusComp.writeRecord();
                 			mainBusComp.writeRecord();
                 			
-                			// set primary field if successful link
                 			mvgBusComp.prepareForQuery(recordForUpsert, true, false);
                 			mvgBusComp.executeQuery2(true, true);
             				if (mvgBusComp.firstRecord())
             				{
-            					mvgBusComp.setFieldValue("SSA Primary Field", "Y");
-            					mainBusComp.writeRecord();
+								setFieldsForUpdate(mvgBusComp, recordForUpsert);
+								mvgBusComp.writeRecord();
+								mainBusComp.writeRecord();
             				}
             			}
             		}

@@ -60,13 +60,6 @@ public interface SiebelPersistence
 	public String siebelUpsertMvgField(Object parentObj, String fieldName, Object recordForUpsert);
 	
 	/**
-	 * If a parent row exists and the..
-	 * @param parentObj
-	 * @param childObj
-	 * @return
-	 */
-	public String siebelSetMvgPrimaryRecord(Object parentObj, String fieldName, Object childObj);
-	/**
 	 * Deletes the row corresponding to the given object.
 	 * A siebel query is executed for rows that match the given object (as in {@link #siebelSelect(Object)}, and then the first matching
 	 * row is deleted; any others are ignored.
