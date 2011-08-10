@@ -112,4 +112,10 @@ public class BadSiebelPersistence implements SiebelPersistence
     {
     }
 
+	public String siebelInsertChildField(Object parent, String fieldName, Object child)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

@@ -14,29 +14,26 @@ public class BusComp
 {
 	private SiebelBusComp busComp;
 	private boolean isAlreadyQueried = false;
-	private String name;
-	SiebelBusObject associatedBusObj;
+	private SiebelBusObject associatedBusObj;
 	
-	public BusComp(SiebelBusComp busComp, String name, SiebelBusObject associtedBusObj)
+	public BusComp(SiebelBusComp busComp, SiebelBusObject associtedBusObj)
 	{
 		this.busComp = busComp;
-		this.name = name;
 		this.associatedBusObj = associtedBusObj;
 	}
 	
 	public BusComp(SiebelBusComp busComp)
     {
-        this(busComp,null,null);
+        this(busComp, null);
     }
-
-    public BusComp(SiebelBusComp busComp, String name)
-    {
-        this(busComp,name,null);
-    }
-
 	
 	//getters & setters
 	
+	public BusComp getChildBusComp(String childBusCompName) throws SiebelException
+	{
+		return new BusComp(associatedBusObj.getBusComp(childBusCompName));
+	}
+
 	public boolean isAlreadyQueried() {
 		return isAlreadyQueried;
 	}
@@ -143,17 +140,12 @@ public class BusComp
 		return busComp.associate(value);
 	}
 
-	public String getName()
-	{
-		return name;
-	}
-
     void activateFields(Object obj) throws SiebelException
     {
     	List<Field> fields = SiebelHelper.getAllDeclaredInstanceFields(obj);
     	for(Field field : fields)
     	{
-    		if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field))
+    		if(!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isChildBusinessCompField(field))
     		{
     			String fieldName = SiebelHelper.getFieldName(field);
     			activateField(fieldName);
@@ -194,7 +186,7 @@ public class BusComp
         for(Field field : fields)
     	{
             field.setAccessible(true);
-    		if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !(keyMatters && !SiebelUtil.isKeyField(field)))
+    		if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isChildBusinessCompField(field) && !(keyMatters && !SiebelUtil.isKeyField(field)))
     		{
     			try
                 {
@@ -226,5 +218,4 @@ public class BusComp
     		}
     	}
     }
-
 }

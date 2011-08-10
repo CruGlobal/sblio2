@@ -58,6 +58,7 @@ public interface SiebelPersistence
 	
 	public String siebelInsertMvgField(Object parentObj, String fieldName, Object recordForUpsert);
 	public String siebelUpsertMvgField(Object parentObj, String fieldName, Object recordForUpsert);
+	public String siebelInsertChildField(Object parent, String fieldName, Object child);
 	
 	/**
 	 * Deletes the row corresponding to the given object.

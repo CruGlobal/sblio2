@@ -2,6 +2,7 @@ package org.ccci.framework.sblio;
 
 import java.lang.reflect.Field;
 
+import org.ccci.framework.sblio.annotations.ChildBusinessCompField;
 import org.ccci.framework.sblio.annotations.Key;
 import org.ccci.framework.sblio.annotations.MvgField;
 import org.ccci.framework.sblio.annotations.ReadOnly;
@@ -39,6 +40,11 @@ public class SiebelUtil
         return field.getAnnotation(MvgField.class) != null;
     }
 
+    static boolean isChildBusinessCompField(Field field)
+    {
+        return field.getAnnotation(ChildBusinessCompField.class) != null;
+    }
+
     static boolean isKeyField(Field field)
     {
     	return field.getAnnotation(Key.class) != null;
@@ -61,4 +67,13 @@ public class SiebelUtil
         return siebelFieldName;
     }
 
+    static String determineSiebelFieldNameForChildBusinessCompField(Object parentObj, String fieldName)
+    {
+        String siebelFieldName = fieldName;
+        Field field = SiebelHelper.getField(parentObj.getClass(), fieldName);
+        if(field==null) return fieldName;
+        ChildBusinessCompField fieldMetadata = field.getAnnotation(ChildBusinessCompField.class);
+        if(fieldMetadata!=null && !Util.isBlank(fieldMetadata.name())) siebelFieldName = fieldMetadata.name();
+        return siebelFieldName;
+    }
 }

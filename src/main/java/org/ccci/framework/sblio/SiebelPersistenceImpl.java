@@ -8,6 +8,7 @@ import java.util.List;
 import org.ccci.exceptions.FatalException;
 import org.ccci.framework.sblio.annotations.BusinessComp;
 import org.ccci.framework.sblio.annotations.BusinessObject;
+import org.ccci.framework.sblio.annotations.ChildBusinessCompField;
 import org.ccci.framework.sblio.annotations.MvgField;
 import org.ccci.framework.sblio.exceptions.SiebelUnavailableException;
 
@@ -101,21 +102,40 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		BusComp mainBusComp = null;
 		try
 		{
-			mainBusComp = setupForQuery(obj, false);
-			mainBusComp.executeQuery(false);
+			mainBusComp = loadCompAndObj(obj);
 
-			if (mainBusComp.firstRecord())
+			return siebelSelect(mainBusComp, obj);
+		}
+		catch (SiebelException e)
+		{
+			throw new SblioException("Unable to perform select on " + obj, e);
+		}
+		finally
+		{
+			if (mainBusComp != null)
+				mainBusComp.release();
+		}
+	}
+
+	private int siebelSelect(BusComp busComp, Object obj)
+	{
+		try
+		{
+			busComp.prepareForQuery(obj, false, true);
+			busComp.executeQuery(false);
+
+			if (busComp.firstRecord())
 			{
-				copySearchResultsToEntityObject(mainBusComp, obj);
+				copySearchResultsToEntityObject(busComp, obj);
 
-				cascadeLoadRelationships(mainBusComp, obj);
+				cascadeLoadRelationships(busComp, obj);
 
 				int count = 1;
 
 				// this is for callers who depend on exactly one match, if
 				// there's another record, increment match, but still only
 				// return the first
-				if (mainBusComp.nextRecord())
+				if (busComp.nextRecord())
 					count++;
 
 				return count;
@@ -126,6 +146,29 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		catch (SiebelException e)
 		{
 			throw new SblioException("Unable to perform select on " + obj, e);
+		}
+	}
+
+	public <T> List<T> siebelListSelect(T obj)
+	{
+		return new ArrayList<T>(siebelCollectionSelect(obj));
+	}
+
+	public <T> Collection<T> siebelCollectionSelect(T obj)
+	{
+		BusComp mainBusComp = null;
+		try
+		{
+			if (obj == null)
+				throw new NullPointerException("query object is null");
+
+			mainBusComp = loadCompAndObj(obj);
+
+			return siebelCollectionSelect(mainBusComp, obj);
+		}
+		catch (SiebelException e)
+		{
+			throw new SblioException("Unable to perform list select on " + obj, e);
 		}
 		finally
 		{
@@ -142,6 +185,15 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 			for (Field f : fs)
 			{
 				f.setAccessible(true);
+
+				ChildBusinessCompField childBusinessCompField = f.getAnnotation(ChildBusinessCompField.class);
+				if (childBusinessCompField != null && childBusinessCompField.cascadeLoad())
+				{
+					BusComp childBusComp = parentBusComp.getChildBusComp(SiebelUtil.determineSiebelFieldNameForChildBusinessCompField(parentObj, f.getName()));
+					f.set(parentObj, siebelCollectionSelect(childBusComp, childBusinessCompField.clazz().newInstance()));
+					childBusComp.release();
+				}
+
 				MvgField fieldMetadata = f.getAnnotation(MvgField.class);
 				if (fieldMetadata != null && fieldMetadata.cascadeLoad())
 				{
@@ -149,11 +201,44 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 					f.set(parentObj, siebelSelectMvg(parentBusComp, siebelName, fieldMetadata.clazz().newInstance()));
 				}
 			}
-
 		}
 		catch (Exception e)
 		{
 			throw new SblioException("Unable to perform select on " + parentObj, e);
+		}
+	}
+
+	private <T> Collection<T> siebelCollectionSelect(BusComp busComp, T object)
+	{
+		try
+		{
+			if (object == null)
+				throw new NullPointerException("query object is null");
+
+			Collection<T> collection = new ArrayList<T>();
+
+			busComp.prepareForQuery(object, false, true);
+			busComp.executeQuery(false);
+
+			if (busComp.firstRecord())
+			{
+				@SuppressWarnings("unchecked")
+				Class<T> objType = (Class<T>) object.getClass();
+				do
+				{
+					T tempObj = instantiate(objType);
+					copySearchResultsToEntityObject(busComp, tempObj);
+					collection.add(tempObj);
+				}
+				while (busComp.nextRecord());
+			}
+
+			return collection;
+
+		}
+		catch (SiebelException e)
+		{
+			throw new SblioException("Unable to perform select on " + object, e);
 		}
 	}
 
@@ -177,7 +262,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		{
 			Collection<T> collection = new ArrayList<T>();
 
-			tempBusComp = new BusComp(busComp.getMVGBusComp(fieldName), null, null);
+			tempBusComp = new BusComp(busComp.getMVGBusComp(fieldName));
 
 			tempBusComp.prepareForQuery(exampleChildObject, false, true);
 
@@ -210,45 +295,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		}
 	}
 
-	public <T> List<T> siebelListSelect(T obj)
-	{
-		if (obj == null)
-			throw new NullPointerException("query object is null");
-
-		BusComp mainBusComp = null;
-		try
-		{
-			List<T> returnList = new ArrayList<T>();
-			mainBusComp = setupForQuery(obj, false);
-			mainBusComp.executeQuery(false);
-
-			if (mainBusComp.firstRecord())
-			{
-				@SuppressWarnings("unchecked")
-				Class<T> objType = (Class<T>) obj.getClass();
-				do
-				{
-					T tempObj = instantiate(objType);
-					copySearchResultsToEntityObject(mainBusComp, tempObj);
-					cascadeLoadRelationships(mainBusComp, tempObj);
-					returnList.add(tempObj);
-				}
-				while (mainBusComp.nextRecord());
-			}
-
-			return returnList;
-		}
-		catch (SiebelException e)
-		{
-			throw new SblioException("Unable to perform list select on " + obj, e);
-		}
-		finally
-		{
-			if (mainBusComp != null)
-				mainBusComp.release();
-		}
-	}
-
 	private <T> T instantiate(Class<T> objType)
 	{
 		try
@@ -272,15 +318,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		{
 			mainBusComp = loadCompAndObj(obj);
 
-			mainBusComp.newRecord(false);
-			setFieldsForInsert(mainBusComp, obj);
-			boolean success = mainBusComp.writeRecord();
-			String retId = mainBusComp.getFieldValue("Id");
-
-			if (success)
-				return retId;
-			else
-				throw new SblioException("insert did not succeed");
+			return siebelInsert(mainBusComp, obj);
 		}
 		catch (SiebelException e)
 		{
@@ -293,29 +331,39 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		}
 	}
 
+	private String siebelInsert(BusComp busComp, Object obj)
+	{
+		try
+		{
+			busComp.newRecord(false);
+			setFieldsForInsert(busComp, obj);
+			if (!busComp.writeRecord())
+				throw new SblioException("insert did not succeed");
+
+			return busComp.getFieldValue("Id");
+		}
+		catch (SiebelException e)
+		{
+			throw new SblioException("Unable to perform insert on " + obj, e);
+		}
+	}
+
 	public String siebelUpsert(Object obj)
 	{
-		String retVal;
 		BusComp mainBusComp = null;
 		try
 		{
 			mainBusComp = setupForQuery(obj, true);
-
 			mainBusComp.executeQuery(false);
 
 			if (mainBusComp.firstRecord())
 			{
 				setFieldsForUpdate(mainBusComp, obj);
 				mainBusComp.writeRecord();
+				return mainBusComp.getFieldValue("Id");
 			}
 			else
-			{
-				mainBusComp.newRecord(false);
-				setFieldsForInsert(mainBusComp, obj);
-				mainBusComp.writeRecord();
-			}
-
-			retVal = mainBusComp.getFieldValue("Id");
+				return siebelInsert(mainBusComp, obj);
 		}
 		catch (SiebelException e)
 		{
@@ -326,8 +374,37 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 			if (mainBusComp != null)
 				mainBusComp.release();
 		}
+	}
 
-		return retVal;
+	public String siebelInsertChildField(Object parent, String fieldName, Object child)
+	{
+		BusComp busComp = null;
+		BusComp childBusComp = null;
+		try
+		{
+			ChildBusinessCompField fieldMetadata = SiebelHelper.getField(parent.getClass(), fieldName).getAnnotation(ChildBusinessCompField.class);
+			if (fieldMetadata == null || !fieldMetadata.manyToMany())
+				throw new SblioException("Child field is not many to many " + child);
+
+			busComp = loadCompAndObj(parent);
+
+			siebelSelect(busComp, parent);
+
+			childBusComp = busComp.getChildBusComp(SiebelUtil.determineSiebelFieldNameForChildBusinessCompField(parent, fieldName));
+
+			return siebelInsert(childBusComp, child);
+		}
+		catch (SiebelException e)
+		{
+			throw new SblioException("Unable to perform insert on parent " + parent + " and child " + child, e);
+		}
+		finally
+		{
+			if (busComp != null)
+				busComp.release();
+			if (childBusComp != null)
+				childBusComp.release();
+		}
 	}
 
 	public String siebelInsertMvgField(Object parentObj, String fieldName, Object recordForUpsert)
@@ -361,11 +438,11 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 					MvgField fieldMetadata = f.getAnnotation(MvgField.class);
 
 					String siebelFieldName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, fieldName);
-					mvgBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName), null, null);
+					mvgBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName));
 
 					if (fieldMetadata != null && fieldMetadata.manyToMany())
 					{
-						assocBusComp = new BusComp(mvgBusComp.getAssocBusComp(), null, null);
+						assocBusComp = new BusComp(mvgBusComp.getAssocBusComp());
 
 						assocBusComp.prepareForQuery(recordForUpsert, true, false);
 
@@ -503,7 +580,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 				{
 					String siebelFieldName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, fieldName);
 
-					mvgBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName), null, null);
+					mvgBusComp = new BusComp(mainBusComp.getMVGBusComp(siebelFieldName));
 					if (searchForMatchInMvg(mvgBusComp, recordForDelete))
 					{
 						mvgBusComp.deleteRecord();
@@ -643,7 +720,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		for (Field field : fields)
 		{
 			field.setAccessible(true);
-			if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isReadOnlyField(field))
+			if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isChildBusinessCompField(field) && !SiebelUtil.isReadOnlyField(field))
 			{
 				String fieldName = SiebelHelper.getFieldName(field);
 				Object fieldValueObject = SiebelHelper.getFieldValueFromAccessibleField(obj, field);
@@ -670,7 +747,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		for (Field field : fields)
 		{
 			field.setAccessible(true);
-			if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isReadOnlyField(field))
+			if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isChildBusinessCompField(field) && !SiebelUtil.isReadOnlyField(field))
 			{
 				String fieldName = SiebelHelper.getFieldName(field);
 				Object fieldValueObject = SiebelHelper.getFieldValueFromAccessibleField(obj, field);
@@ -706,7 +783,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		for (Field field : fields)
 		{
 			field.setAccessible(true);
-			if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field))
+			if (!SiebelUtil.isTransientField(field) && !SiebelUtil.isMvgField(field) && !SiebelUtil.isChildBusinessCompField(field))
 			{
 				String fieldName = SiebelHelper.getFieldName(field);
 				Class<?> fieldType = field.getType();
@@ -784,7 +861,7 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 
 		if (bc != null)
 		{
-			return new BusComp(busObj.getBusComp(bc.name()), bc.name(), busObj);
+			return new BusComp(busObj.getBusComp(bc.name()), busObj);
 		}
 
 		return null;
