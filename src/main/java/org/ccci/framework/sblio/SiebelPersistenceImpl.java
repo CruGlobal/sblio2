@@ -99,54 +99,9 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 
 	public int siebelSelect(Object obj)
 	{
-		BusComp mainBusComp = null;
-		try
-		{
-			mainBusComp = loadCompAndObj(obj);
+		List<Object> list = siebelListSelect(obj);
 
-			return siebelSelect(mainBusComp, obj);
-		}
-		catch (SiebelException e)
-		{
-			throw new SblioException("Unable to perform select on " + obj, e);
-		}
-		finally
-		{
-			if (mainBusComp != null)
-				mainBusComp.release();
-		}
-	}
-
-	private int siebelSelect(BusComp busComp, Object obj)
-	{
-		try
-		{
-			busComp.prepareForQuery(obj, false, true);
-			busComp.executeQuery(false);
-
-			if (busComp.firstRecord())
-			{
-				copySearchResultsToEntityObject(busComp, obj);
-
-				cascadeLoadRelationships(busComp, obj);
-
-				int count = 1;
-
-				// this is for callers who depend on exactly one match, if
-				// there's another record, increment match, but still only
-				// return the first
-				if (busComp.nextRecord())
-					count++;
-
-				return count;
-			}
-
-			return 0;
-		}
-		catch (SiebelException e)
-		{
-			throw new SblioException("Unable to perform select on " + obj, e);
-		}
+		return list.size();
 	}
 
 	public <T> List<T> siebelListSelect(T obj)
@@ -174,6 +129,50 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		{
 			if (mainBusComp != null)
 				mainBusComp.release();
+		}
+	}
+
+	private <T> Collection<T> siebelCollectionSelect(BusComp busComp, T object)
+	{
+		try
+		{
+			if (object == null)
+				throw new NullPointerException("query object is null");
+
+			Collection<T> collection = new ArrayList<T>();
+
+			busComp.prepareForQuery(object, false, true);
+			busComp.executeQuery(false);
+
+			if (busComp.firstRecord())
+			{
+				@SuppressWarnings("unchecked")
+				Class<T> objType = (Class<T>) object.getClass();
+				do
+				{
+					T tempObj = instantiate(objType);
+
+					copySearchResultsToEntityObject(busComp, tempObj);
+					if (collection.size() == 0)
+						// populate passed object
+						copySearchResultsToEntityObject(busComp, object);
+
+					cascadeLoadRelationships(busComp, tempObj);
+					if (collection.size() == 0)
+						// populate passed object
+						cascadeLoadRelationships(busComp, object);
+
+					collection.add(tempObj);
+				}
+				while (busComp.nextRecord());
+			}
+
+			return collection;
+
+		}
+		catch (SiebelException e)
+		{
+			throw new SblioException("Unable to perform select on " + object, e);
 		}
 	}
 
@@ -205,40 +204,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		catch (Exception e)
 		{
 			throw new SblioException("Unable to perform select on " + parentObj, e);
-		}
-	}
-
-	private <T> Collection<T> siebelCollectionSelect(BusComp busComp, T object)
-	{
-		try
-		{
-			if (object == null)
-				throw new NullPointerException("query object is null");
-
-			Collection<T> collection = new ArrayList<T>();
-
-			busComp.prepareForQuery(object, false, true);
-			busComp.executeQuery(false);
-
-			if (busComp.firstRecord())
-			{
-				@SuppressWarnings("unchecked")
-				Class<T> objType = (Class<T>) object.getClass();
-				do
-				{
-					T tempObj = instantiate(objType);
-					copySearchResultsToEntityObject(busComp, tempObj);
-					collection.add(tempObj);
-				}
-				while (busComp.nextRecord());
-			}
-
-			return collection;
-
-		}
-		catch (SiebelException e)
-		{
-			throw new SblioException("Unable to perform select on " + object, e);
 		}
 	}
 
@@ -384,11 +349,11 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		{
 			ChildBusinessCompField fieldMetadata = SiebelHelper.getField(parent.getClass(), fieldName).getAnnotation(ChildBusinessCompField.class);
 			if (fieldMetadata == null || !fieldMetadata.manyToMany())
-				throw new SblioException("Child field is not many to many " + child);
+				throw new SblioException("Child field is not many to many " + child + " for parent " + parent);
 
 			busComp = loadCompAndObj(parent);
 
-			siebelSelect(busComp, parent);
+			siebelCollectionSelect(busComp, parent);
 
 			childBusComp = busComp.getChildBusComp(SiebelUtil.determineSiebelFieldNameForChildBusinessCompField(parent, fieldName));
 
