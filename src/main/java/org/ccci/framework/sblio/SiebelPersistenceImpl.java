@@ -1,6 +1,7 @@
 package org.ccci.framework.sblio;
 
 import java.lang.reflect.Field;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -154,13 +155,14 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 
 					copySearchResultsToEntityObject(busComp, tempObj);
 					if (collection.size() == 0)
-						// populate passed object
 						copySearchResultsToEntityObject(busComp, object);
 
-					cascadeLoadRelationships(busComp, tempObj);
+					List<T> objects = new ArrayList<T>();
+					objects.add(tempObj);
 					if (collection.size() == 0)
-						// populate passed object
-						cascadeLoadRelationships(busComp, object);
+						objects.add(object);
+
+					cascadeLoadRelationships(busComp, objects);
 
 					collection.add(tempObj);
 				}
@@ -176,11 +178,11 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 		}
 	}
 
-	private void cascadeLoadRelationships(BusComp parentBusComp, Object parentObj)
+	private <T> void cascadeLoadRelationships(BusComp parentBusComp, List<T> parentObjects)
 	{
 		try
 		{
-			List<Field> fs = SiebelHelper.getAllDeclaredInstanceFields(parentObj);
+			List<Field> fs = SiebelHelper.getAllDeclaredInstanceFields(parentObjects.get(0));
 			for (Field f : fs)
 			{
 				f.setAccessible(true);
@@ -188,22 +190,26 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 				ChildBusinessCompField childBusinessCompField = f.getAnnotation(ChildBusinessCompField.class);
 				if (childBusinessCompField != null && childBusinessCompField.cascadeLoad())
 				{
-					BusComp childBusComp = parentBusComp.getChildBusComp(SiebelUtil.determineSiebelFieldNameForChildBusinessCompField(parentObj, f.getName()));
-					f.set(parentObj, siebelCollectionSelect(childBusComp, childBusinessCompField.clazz().newInstance()));
+					BusComp childBusComp = parentBusComp.getChildBusComp(SiebelUtil.determineSiebelFieldNameForChildBusinessCompField(parentObjects.get(0), f.getName()));
+					Collection<?> siebelSelection = siebelCollectionSelect(childBusComp, childBusinessCompField.clazz().newInstance());
+					for(Object parentObject : parentObjects)
+						f.set(parentObject, siebelSelection);
 					childBusComp.release();
 				}
 
 				MvgField fieldMetadata = f.getAnnotation(MvgField.class);
 				if (fieldMetadata != null && fieldMetadata.cascadeLoad())
 				{
-					String siebelName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObj, f.getName());
-					f.set(parentObj, siebelSelectMvg(parentBusComp, siebelName, fieldMetadata.clazz().newInstance()));
+					String siebelName = SiebelUtil.determineSiebelFieldNameForMvgField(parentObjects.get(0), f.getName());
+					Collection<Object> siebelSelection = siebelSelectMvg(parentBusComp, siebelName, fieldMetadata.clazz().newInstance());
+					for(Object parentObject : parentObjects)
+						f.set(parentObject, siebelSelection);
 				}
 			}
 		}
 		catch (Exception e)
 		{
-			throw new SblioException("Unable to perform select on " + parentObj, e);
+			throw new SblioException("Unable to perform select on " + parentObjects.get(0), e);
 		}
 	}
 
