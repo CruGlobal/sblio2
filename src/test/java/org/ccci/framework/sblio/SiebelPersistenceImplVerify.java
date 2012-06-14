@@ -70,10 +70,10 @@ public class SiebelPersistenceImplVerify
 
 	@Test
 	public void showUsers() throws Exception
-	{		
+	{
 		List<String> logins = new ArrayList<String>();
 		logins.add("nathan.kopp@ccci.org");
-		for(int i=1; i<7; i++)
+		for (int i = 1; i < 7; i++)
 			logins.add("nathan" + i + ".kopp@ccci.org");
 
 		showUsers(logins);
@@ -118,19 +118,19 @@ public class SiebelPersistenceImplVerify
 	@Test
 	public void insertUser() throws Exception
 	{
-		String loginName = "nathan.kopp@ccci.org";
-		String newUserLoginName = "nathan8.kopp@ccci.org";
+		String templateLogin = "nathan.kopp@ccci.org";
+		String newUserLoginName = "nathan2.kopp@ccci.org";
 
-		insertUser(loginName, newUserLoginName);
+		insertUser(templateLogin, newUserLoginName);
 
 		SiebelUser siebelUser = getSiebelUserByLoginName(newUserLoginName);
 
 		assertThat(siebelUser.getLoginName().toLowerCase(), is(newUserLoginName.toLowerCase()));
 	}
 
-	private void insertUser(String loginName, String newUserLoginName) throws Exception
+	private void insertUser(String templateLogin, String newUserLoginName) throws Exception
 	{
-		SiebelUser siebelUser = getSiebelUserByLoginName(loginName);
+		SiebelUser siebelUser = getSiebelUserByLoginName(templateLogin);
 
 		siebelUser.setId(null);
 
@@ -142,7 +142,7 @@ public class SiebelPersistenceImplVerify
 	@Test
 	public void deleteUser() throws Exception
 	{
-		String loginName = "nathan8.kopp@ccci.org";
+		String loginName = "nathan2.kopp@ccci.org";
 
 		deleteUser(loginName);
 	}
