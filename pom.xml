@@ -3,7 +3,7 @@
   <groupId>org.ccci</groupId>
   <artifactId>sblio</artifactId>
   <name>Siebel IO</name>
-  <version>1.1-NKDEV</version>
+  <version>2-SNAPSHOT</version>
   <description>A wrapper library for Siebel's provided java api, which is horrid</description>
   
   
