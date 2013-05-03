@@ -10,13 +10,16 @@
   
     <repositories>
       <repository>
+        <snapshots>
+          <enabled>false</enabled>
+        </snapshots>
         <id>ccci-libs-releases</id>
         <name>Libraries (Full Releases)</name>
         <url>http://arkham.ccci.org/artifactory/libs-releases/</url>
       </repository>
       <repository>
         <snapshots>
-          <enabled>false</enabled>
+          <enabled>true</enabled>
         </snapshots>
         <id>cru-snapshots</id>
         <url>http://arkham.ccci.org:80/artifactory/libs-snapshots-local</url>
