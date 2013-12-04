@@ -1,15 +1,14 @@
 package org.ccci.framework.sblio;
 
-import javax.inject.Inject;
-
+import com.google.common.base.Strings;
+import com.siebel.data.SiebelException;
 import org.apache.commons.pool.BasePoolableObjectFactory;
 import org.apache.log4j.Logger;
 import org.ccci.framework.failover.CcciFailoverManager;
 import org.ccci.framework.sblio.annotations.Siebel;
 import org.ccci.framework.sblio.exceptions.SiebelUnavailableException;
-import org.ccci.util.Util;
 
-import com.siebel.data.SiebelException;
+import javax.inject.Inject;
 
 public class SiebelPersistenceFactory extends BasePoolableObjectFactory
 {
@@ -61,7 +60,7 @@ public class SiebelPersistenceFactory extends BasePoolableObjectFactory
     	{
     	    SiebelPersistence persistence;
     		url = SiebelSettings.getProps().getProperty(system + "." + "url");
-    		if(Util.isBlank(username)) username = SiebelSettings.getProps().getProperty(system + "." + "defaultUser");
+    		if(Strings.isNullOrEmpty(username)) username = SiebelSettings.getProps().getProperty(system + "." + "defaultUser");
     		password = SiebelSettings.getProps().getProperty(system + "." + username);
     		
     		if(this.failoverManager == null)

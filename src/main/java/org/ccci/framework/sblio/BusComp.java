@@ -1,14 +1,13 @@
 package org.ccci.framework.sblio;
 
-import java.lang.reflect.Field;
-import java.util.List;
-
-import org.ccci.framework.sblio.annotations.BusinessComp;
-import org.ccci.util.Util;
-
+import com.google.common.base.Strings;
 import com.siebel.data.SiebelBusComp;
 import com.siebel.data.SiebelBusObject;
 import com.siebel.data.SiebelException;
+import org.ccci.framework.sblio.annotations.BusinessComp;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 public class BusComp
 {
@@ -171,7 +170,6 @@ public class BusComp
      * used by:
      * 		-siebelSelect
      * 		-siebelListSelect
-     * @param siebelPersistenceImpl TODO
      * @param obj
      * @param keyMatters (for distinguishing b/w plain select & select for an update)
      * @return
@@ -195,7 +193,7 @@ public class BusComp
                     	Object fieldValueObject = SiebelHelper.getFieldValueFromAccessibleField(obj, field);
                     	String fieldName = SiebelHelper.getFieldName(field);
                     	String fieldValue = SiebelHelper.convertFieldValueToSiebelValue(field,fieldValueObject);
-                    	if(!Util.isBlank(fieldValue))
+                    	if(!Strings.isNullOrEmpty(fieldValue))
                     	{
                     		emptyQuery = false;
                     		setSearchSpec(fieldName,fieldValue);
