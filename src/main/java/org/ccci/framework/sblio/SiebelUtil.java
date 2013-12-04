@@ -1,15 +1,15 @@
 package org.ccci.framework.sblio;
 
-import java.lang.reflect.Field;
-
+import com.google.common.base.Strings;
 import org.ccci.framework.sblio.annotations.ChildBusinessCompField;
 import org.ccci.framework.sblio.annotations.Key;
 import org.ccci.framework.sblio.annotations.MvgField;
 import org.ccci.framework.sblio.annotations.ReadOnly;
 import org.ccci.framework.sblio.annotations.Transient;
-import org.ccci.util.Util;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import java.lang.reflect.Field;
 
 public class SiebelUtil
 {
@@ -63,7 +63,7 @@ public class SiebelUtil
         Field field = SiebelHelper.getField(parentObj.getClass(), fieldName);
         if(field==null) return fieldName;
         MvgField fieldMetadata = field.getAnnotation(MvgField.class);
-        if(fieldMetadata!=null && !Util.isBlank(fieldMetadata.name())) siebelFieldName = fieldMetadata.name();
+        if(fieldMetadata!=null && !Strings.isNullOrEmpty(fieldMetadata.name())) siebelFieldName = fieldMetadata.name();
         return siebelFieldName;
     }
 
@@ -73,7 +73,7 @@ public class SiebelUtil
         Field field = SiebelHelper.getField(parentObj.getClass(), fieldName);
         if(field==null) return fieldName;
         ChildBusinessCompField fieldMetadata = field.getAnnotation(ChildBusinessCompField.class);
-        if(fieldMetadata!=null && !Util.isBlank(fieldMetadata.name())) siebelFieldName = fieldMetadata.name();
+        if(fieldMetadata!=null && !Strings.isNullOrEmpty(fieldMetadata.name())) siebelFieldName = fieldMetadata.name();
         return siebelFieldName;
     }
 }

@@ -7,10 +7,9 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.google.common.base.Strings;
 import org.ccci.framework.sblio.annotations.SiebelField;
 import org.ccci.framework.sblio.annotations.SiebelFieldValue;
-import org.ccci.util.StringUtil;
-import org.ccci.util.Util;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 
@@ -33,7 +32,7 @@ public class SiebelHelper
      */
     public static String convertCamelCaseToSpaces(String camelCase)
     {
-    	if(Util.isBlank(camelCase)) return camelCase;
+    	if(Strings.isNullOrEmpty(camelCase)) return camelCase;
     	
         StringBuffer spaces = new StringBuffer();
 
@@ -209,7 +208,7 @@ public class SiebelHelper
         }
         else
         {
-            if (StringUtil.isBlank(fieldValue))
+            if (Strings.isNullOrEmpty(fieldValue))
             {
                 return null;
             }
@@ -243,7 +242,7 @@ public class SiebelHelper
             {
                 return parseLocalDate(fieldValue);
             }
-            else if(Enum.class.isAssignableFrom(fieldType) && !Util.isBlank(fieldValue))
+            else if(Enum.class.isAssignableFrom(fieldType) && !Strings.isNullOrEmpty(fieldValue))
             {
                 @SuppressWarnings("rawtypes")  //sadly, I think using asSubclass() requires us to use a raw type
                 Class<? extends Enum> enumType = fieldType.asSubclass(Enum.class);

@@ -1,13 +1,15 @@
 package org.ccci.framework.sblio;
 
+import com.google.common.io.Resources;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-
-import org.apache.log4j.Logger;
-import org.ccci.util.CommaList;
-import org.ccci.util.LoadFromClasspath;
 
 public class SiebelSettings
 {
@@ -40,11 +42,7 @@ public class SiebelSettings
     public static void reloadProperties() throws IOException
     {
     	props = new Properties();
-        InputStream propertiesStream = LoadFromClasspath.getStream(siebelPropertiesFilename);
-        if (propertiesStream == null)
-        {
-            throw new IllegalStateException("No " + siebelPropertiesFilename + " on classpath!");
-        }
+        InputStream propertiesStream = Resources.getResource("/" + siebelPropertiesFilename).openStream();
         try
         {
             props.load(propertiesStream);
@@ -59,7 +57,10 @@ public class SiebelSettings
         // load the list of users that we should pool... this is actually
         // used by DbioList.  the list is also converted to lowercase for
         // easier comparison
-        pooledUsers = new CommaList(props.getProperty("pooledUserList"));
+        String pooledUserList = props.getProperty("pooledUserList");
+        pooledUsers = pooledUserList == null ?
+           Collections.emptyList() :
+           Arrays.asList(pooledUserList.trim().split("\\s*,\\s*"));
 
         for(int i=0; i<pooledUsers.size(); i++)
         {

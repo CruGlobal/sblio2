@@ -1,21 +1,18 @@
 package org.ccci.framework.sblio;
 
-import java.lang.reflect.Field;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import org.ccci.exceptions.FatalException;
+import com.siebel.data.SiebelBusObject;
+import com.siebel.data.SiebelDataBean;
+import com.siebel.data.SiebelException;
 import org.ccci.framework.sblio.annotations.BusinessComp;
 import org.ccci.framework.sblio.annotations.BusinessObject;
 import org.ccci.framework.sblio.annotations.ChildBusinessCompField;
 import org.ccci.framework.sblio.annotations.MvgField;
 import org.ccci.framework.sblio.exceptions.SiebelUnavailableException;
 
-import com.siebel.data.SiebelBusObject;
-import com.siebel.data.SiebelDataBean;
-import com.siebel.data.SiebelException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * 
@@ -795,8 +792,6 @@ public class SiebelPersistenceImpl implements SiebelPersistence
 	 * @return
 	 * @throws SiebelException
 	 * @throws IllegalAccessException
-	 * @throws FatalException -- could come from this method (failed query) or
-	 *             populateBusinessComp
 	 */
 	private BusComp setupForQuery(Object obj, boolean forUpdate) throws SiebelException
 	{
