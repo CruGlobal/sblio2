@@ -12,9 +12,8 @@ import javax.inject.Inject;
 
 public class SiebelPersistenceFactory extends BasePoolableObjectFactory
 {
-	private static final String MODULE_NAME = "default";
-	private Logger siebelLog = Logger.getLogger("Siebel");
-	
+	private Logger siebelLog = Logger.getLogger(this.getClass());
+
 	@Inject @Siebel private CcciFailoverManager failoverManager;
 	
 	private String url;
@@ -51,19 +50,21 @@ public class SiebelPersistenceFactory extends BasePoolableObjectFactory
      * for makeObject we'll simply return a new SiebelDataBean
      */  
     public Object makeObject() throws SiebelException
-    {    
-    	if(failoverManager.isFailoverMode()) return null;
+    {
+		if(failoverManager != null)
+	    	if(failoverManager.isFailoverMode()) return null;
     	
     	siebelLog.debug("SiebelDataBeanFactory:makeObject()  creating SiebelDataBean");
     	
     	try
     	{
-    	    SiebelPersistence persistence;
-    		url = SiebelSettings.getProps().getProperty(system + "." + "url");
+			if(Strings.isNullOrEmpty(url)) url = SiebelSettings.getProps().getProperty(system + "." + "url");
     		if(Strings.isNullOrEmpty(username)) username = SiebelSettings.getProps().getProperty(system + "." + "defaultUser");
-    		password = SiebelSettings.getProps().getProperty(system + "." + username);
-    		
-    		if(this.failoverManager == null)
+			if(Strings.isNullOrEmpty(password)) password = SiebelSettings.getProps().getProperty(system + "." + username);
+
+			SiebelPersistence persistence;
+
+			if(this.failoverManager == null)
     		{
     			persistence = new SiebelPersistenceImpl(username,password,url);
     		}
