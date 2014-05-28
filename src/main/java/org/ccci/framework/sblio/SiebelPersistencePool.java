@@ -22,6 +22,8 @@ public class SiebelPersistencePool
 		pool.setMaxIdle(maxIdle);
 		pool.setMinIdle(minIdle);
 		pool.setMinEvictableIdleTimeMillis(idleTimeout);
+
+		pool.setTestOnBorrow(true);
 		pool.setWhenExhaustedAction(GenericObjectPool.WHEN_EXHAUSTED_FAIL);
 	}
 
