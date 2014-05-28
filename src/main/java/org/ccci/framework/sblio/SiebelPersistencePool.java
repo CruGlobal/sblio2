@@ -5,10 +5,10 @@ import org.apache.log4j.Logger;
 
 public class SiebelPersistencePool
 {
-    private static final String DEFAULT_IDLE_TIMEOUT = "300000";
-    private static final String DEFAULT_MIN_IDLE = "2";
-    private static final String DEFAULT_MAX_IDLE = "8";
-    private static final String DEFAULT_MAX_ACTIVE = "20";
+    private static final int DEFAULT_IDLE_TIMEOUT = 300000;
+    private static final int DEFAULT_MIN_IDLE = 2;
+    private static final int DEFAULT_MAX_IDLE = 8;
+    private static final int DEFAULT_MAX_ACTIVE = 20;
 
 	private GenericObjectPool pool = null;
 
@@ -27,7 +27,7 @@ public class SiebelPersistencePool
 
 	public SiebelPersistencePool(String url, String username, String password)
 	{
-		this(url, username, password, Integer.parseInt(DEFAULT_MAX_ACTIVE), Integer.parseInt(DEFAULT_MAX_IDLE), Integer.parseInt(DEFAULT_MIN_IDLE), Integer.parseInt(DEFAULT_IDLE_TIMEOUT));
+		this(url, username, password, DEFAULT_MAX_ACTIVE, DEFAULT_MAX_IDLE, DEFAULT_MIN_IDLE, DEFAULT_IDLE_TIMEOUT);
 	}
 
 	public SiebelPersistence getResource() throws Exception
