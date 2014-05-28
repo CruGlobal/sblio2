@@ -32,18 +32,18 @@ public class SiebelPersistencePool
 
 	public SiebelPersistence getResource() throws Exception
 	{
-		logger.info("get resource");
+		logger.debug("get resource");
 
 		SiebelPersistence siebelPersistence = (SiebelPersistence)pool.borrowObject();
 
-		logger.info("got resource");
+		logger.debug("got resource");
 
 		return siebelPersistence;
 	}
 
 	public void releaseResource(SiebelPersistence siebelPersistence) throws Exception
 	{
-		logger.info("release resource");
+		logger.debug("release resource");
 
 		siebelPersistence.reset();
 
