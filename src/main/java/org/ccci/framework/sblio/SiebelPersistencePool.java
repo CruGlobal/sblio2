@@ -16,6 +16,8 @@ public class SiebelPersistencePool
 
 	public SiebelPersistencePool(String url, String username, String password, int maxActive, int maxIdle, int minIdle, int idleTimeout)
 	{
+		logger.debug("creating siebel persistence pool (simple)");
+
 		pool = new GenericObjectPool(new SiebelPersistenceFactory(url, username, password, null));
 
 		pool.setMaxActive(maxActive);
