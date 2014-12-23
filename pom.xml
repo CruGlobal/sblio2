@@ -3,7 +3,7 @@
   <groupId>org.ccci</groupId>
   <artifactId>sblio</artifactId>
   <name>Siebel IO</name>
-  <version>3-SNAPSHOT</version>
+  <version>4-SNAPSHOT</version>
   <description>A wrapper library for Siebel's provided java api, which is horrid</description>
   
   
@@ -81,6 +81,7 @@
         </configuration>
       </plugin>
       
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -129,13 +130,13 @@
     <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>siebel-java-data-bean</artifactId>
-      <version>8.0</version>
+      <version>8.1.1.11.10</version>
     </dependency>
     
     <dependency>
       <groupId>com.siebel</groupId>
       <artifactId>SiebelJI_enu</artifactId>
-      <version>1.0</version>
+      <version>8.1.1.11.8</version>
     </dependency>
     
     <dependency>
