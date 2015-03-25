@@ -130,7 +130,7 @@
     <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>siebel-java-data-bean</artifactId>
-      <version>8.1.1.11.10</version>
+      <version>8.1.1.11.15</version>
     </dependency>
     
     <dependency>
